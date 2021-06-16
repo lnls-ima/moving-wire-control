@@ -23,6 +23,8 @@ from movingwire.gui.measurementwidget import MeasurementWidget \
     as _MeasurementWidget
 from movingwire.gui.ppmacwidget import PpmacWidget \
     as _PpmacWidget
+from movingwire.gui.databasewidget import DatabaseWidget \
+    as _DatabaseWidget
 
 
 class MovingWireWindow(_QMainWindow):
@@ -51,6 +53,7 @@ class MovingWireWindow(_QMainWindow):
             'power supply',
             'measurement',
             'analysis',
+            'database',
             ]
 
         self.tab_widgets = [
@@ -59,6 +62,7 @@ class MovingWireWindow(_QMainWindow):
             _PowerSupplyWidget(),
             _MeasurementWidget(),
             _AnalysisWidget(),
+            _DatabaseWidget(),
             ]
 
         # connect signals and slots
@@ -75,6 +79,9 @@ class MovingWireWindow(_QMainWindow):
 
         for tab in self.tab_widgets:
             tab.init_tab()
+
+        for i in range(1, self.ui.twg_main.count() - 2):
+            self.ui.twg_main.setTabEnabled(i, False)
 
     def centralize_window(self):
         """Centralize window."""

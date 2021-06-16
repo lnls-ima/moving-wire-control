@@ -2,6 +2,7 @@
 
 __credits__     = [
 #     ('alpha_b.svg', 'Alpha B Icon (from https://materialdesignicons.com/)'),
+    ('stop-circle-outline.svg', 'Stop Icon (from https://materialdesignicons.com/)'),
     ]
 
 

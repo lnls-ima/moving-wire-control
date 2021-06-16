@@ -100,8 +100,12 @@ class ConnectionWidget(_QWidget):
             _QMessageBox.information(self, 'Information',
                                      'Devices connected.',
                                      _QMessageBox.Ok)
+
             self.ui.pbt_connect.setEnabled(False)
             self.ui.pbt_disconnect.setEnabled(True)
+            for i in range(1, self.parent_window.ui.twg_main.count() - 1):
+                self.parent_window.ui.twg_main.setTabEnabled(i, True)
+
             return True
         except Exception:
             self.ui.pbt_connect.setEnabled(True)
@@ -122,11 +126,16 @@ class ConnectionWidget(_QWidget):
                 _volt.disconnect()
             if self.ui.chb_multichannel_en.isChecked():
                 _mult.disconnect()
-            self.ui.pbt_connect.setEnabled(True)
-            self.ui.pbt_disconnect.setEnabled(False)
+
             _QMessageBox.information(self, 'Information',
                                      'Devices disconnected.',
                                      _QMessageBox.Ok)
+
+            self.ui.pbt_connect.setEnabled(True)
+            self.ui.pbt_disconnect.setEnabled(False)
+            for i in range(1, self.parent_window.ui.twg_main.count() - 1):
+                self.parent_window.ui.twg_main.setTabEnabled(i, False)
+
             return True
         except Exception:
             self.ui.pbt_connect.setEnabled(False)

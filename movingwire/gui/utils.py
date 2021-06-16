@@ -121,7 +121,7 @@ def sleep(time):
     Args:
         time (float): time to halt the program in seconds."""
     try:
-        _dt = 0.1
+        _dt = 0.02
         _tf = _time.time() + time
         while _time.time() < _tf:
             _QApplication.processEvents()

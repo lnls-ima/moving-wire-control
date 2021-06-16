@@ -278,7 +278,7 @@
       <item row="2" column="1">
        <widget class="QSpinBox" name="sb_agilent_board">
         <property name="value">
-         <number>2</number>
+         <number>1</number>
         </property>
        </widget>
       </item>

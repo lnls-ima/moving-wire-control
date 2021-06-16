@@ -26,6 +26,7 @@ from movingwire.gui.viewcfgwidget import ViewCfgWidget as _ViewCfgWidget
 
 import matplotlib
 from PyQt5.uic.Compiler.qtproxies import QtWidgets
+from builtins import isinstance
 matplotlib.use('Qt5Agg')
 
 from matplotlib.backends.backend_qt5agg import (
@@ -57,12 +58,12 @@ class AnalysisWidget(_QWidget):
         self.set_pyplot()
 
         self.cfg = _data.configuration.MeasurementConfig()
-        self.meas_fc = _data.measurement.MeasurementData()
+        self.meas_fc = _data.measurement.MeasurementDataFC()
         self.meas_sw = _data.measurement.MeasurementDataSW()
         self.meas_sw2 = _data.measurement.MeasurementDataSW2()
 
         self.amb_cfg = _data.configuration.MeasurementConfig()
-        self.amb_meas_fc = _data.measurement.MeasurementData()
+        self.amb_meas_fc = _data.measurement.MeasurementDataFC()
         self.amb_meas_sw = _data.measurement.MeasurementDataSW()
         self.amb_meas_sw2 = _data.measurement.MeasurementDataSW2()
 
@@ -106,6 +107,7 @@ class AnalysisWidget(_QWidget):
         self.ui.rdb_sw.clicked.connect(self.change_meas_mode)
         self.ui.rdb_sw_I2.clicked.connect(self.change_meas_mode)
         self.ui.rdb_fc.clicked.connect(self.change_meas_mode)
+        self.ui.pbt_stop_motors.clicked.connect(self.stop_motors)
 
     def view_cfg(self):
         try:
@@ -167,9 +169,9 @@ class AnalysisWidget(_QWidget):
         try:
             if any([self.ui.rdb_sw.isChecked(),
                     self.ui.rdb_sw_I2.isChecked()]):
-                _first_integral_calculus = self.first_integral_calculus_sw
+                _integral_calculus = self.integral_calculus_sw
             else:
-                _first_integral_calculus = self.first_integral_calculus
+                _integral_calculus = self.integral_calculus_fc
                 self.cfg.db_update_database(
                     self.database_name,
                     mongo=self.mongo, server=self.server)
@@ -194,14 +196,14 @@ class AnalysisWidget(_QWidget):
             self.ui.le_comments.setText(self.meas.comments)
 
             if self.ui.rdb_sw.isChecked():
-                self.first_integral_calculus_sw(self.meas)
+                self.integral_calculus_sw(self.meas)
                 self.ui.le_cfg_name.setText('')
             elif self.ui.rdb_sw_I2.isChecked():
-                self.first_integral_calculus_sw(self.meas, I2=True)
+                self.integral_calculus_sw(self.meas, I2=True)
                 self.ui.le_cfg_name.setText('')
             else:
                 self.cfg.db_read(self.meas.cfg_id)
-                self.first_integral_calculus(cfg=self.cfg, meas=self.meas)
+                self.integral_calculus_fc(cfg=self.cfg, meas=self.meas)
 
                 cfg_name = self.cfg.name + ' / ' + str(self.cfg.idn)
                 self.ui.le_cfg_name.setText(cfg_name)
@@ -212,6 +214,14 @@ class AnalysisWidget(_QWidget):
 #                                      'Measurement Loaded.',
 #                                      _QMessageBox.Ok)
             return True
+        except IndexError:
+            _traceback.print_exc(file=_sys.stdout)
+            if idx == 0:
+                return False
+            else:
+                _QMessageBox.warning(self, 'Information',
+                                 'Failed to load this configuration.',
+                                 _QMessageBox.Ok)
         except Exception:
             _traceback.print_exc(file=_sys.stdout)
             _QMessageBox.warning(self, 'Information',
@@ -221,24 +231,50 @@ class AnalysisWidget(_QWidget):
 
     def change_meas_mode(self):
         """Changes measurement mode to stretched wire (sw) or flip coil (fc)"""
-        if self.ui.rdb_sw.isChecked():
-            self.meas = self.meas_sw
-            self.amb_meas = self.amb_meas_sw
-        if self.ui.rdb_sw_2.isChecked():
-            self.meas = self.meas_sw2
-            self.amb_meas = self.amb_meas_sw2
-        else:
-            self.meas = self.meas_fc
-            self.amb_meas = self.amb_meas_fc
+        try:
+            if self.ui.rdb_sw.isChecked():
+                self.meas = self.meas_sw
+                self.amb_meas = self.amb_meas_sw
+                _I2 = False
+            elif self.ui.rdb_sw_I2.isChecked():
+                self.meas = self.meas_sw2
+                self.amb_meas = self.amb_meas_sw2
+                _I2 = True
+            else:
+                self.meas = self.meas_fc
+                self.amb_meas = self.amb_meas_fc
+                _I2 = False
 
-        self.update_meas_list()
+            if not _I2:
+                self.ui.label_I.setText('I1 [G.cm] =')
+                self.ui.label_Ip.setText('I1+ [G.cm] =')
+                self.ui.label_Im.setText('I1- [G.cm] =')
+                self.ui.label_Imeas.setText('I1meas [G.cm] =')
+                self.ui.label_Iamb.setText('I1amb [G.cm] =')
+                self.ui.label_Iamb_name.setText('I1amb name / ID =')
+            else:
+                self.ui.label_I.setText('I2 [kG.cm2] =')
+                self.ui.label_Ip.setText('I2+ [kG.cm2] =')
+                self.ui.label_Im.setText('I2- [kG.cm2] =')
+                self.ui.label_Imeas.setText('I2meas [kG.cm2] =')
+                self.ui.label_Iamb.setText('I2amb [kG.cm2] =')
+                self.ui.label_Iamb_name.setText('I2amb name / ID =')
 
-    def first_integral_calculus(self, cfg, meas, fdi_mode=False):
+            self.update_meas_list()
+
+        except Exception:
+            _traceback.print_exc(file=_sys.stdout)
+            _QMessageBox.warning(self, 'Information',
+                                 'Failed to change mode.',
+                                 _QMessageBox.Ok)
+            return False
+
+    def integral_calculus_fc(self, cfg, meas, fdi_mode=False):
         """Calculates first field integral from raw data.
 
         Args:
             cfg (MeasurementConfig): measurement configuration;
-            meas (MeasurementData): measurement data.
+            meas (MeasurementDataFC): measurement data.
 
         Returns:
             MeaseurementData instance if the calculations were successfull;
@@ -281,10 +317,10 @@ class AnalysisWidget(_QWidget):
             meas.I = (meas.flx_f - meas.flx_b)/2 * 1/(2*_turns*_width)
 
             meas.If = meas.I_f[61, :] - meas.I_f[40, :]
-            meas.If_std = meas.If.std()
+            meas.If_std = meas.If.std(ddof=1)
 
             meas.Ib = meas.I_b[61, :] - meas.I_b[40, :]
-            meas.Ib_std = meas.Ib.std()
+            meas.Ib_std = meas.Ib.std(ddof=1)
 
             meas.I_mean = (meas.If.mean() - meas.Ib.mean())/2
             meas.I_std = 1/2*(meas.If_std**2 + meas.Ib_std**2)**0.5
@@ -293,7 +329,7 @@ class AnalysisWidget(_QWidget):
                 self.amb_cfg.db_update_database(
                     self.database_name,
                     mongo=self.mongo, server=self.server)
-                self.amb_meas.db_update_database(
+                self.amb_meas_fc.db_update_database(
                     self.database_name,
                     mongo=self.mongo, server=self.server)
 
@@ -309,12 +345,12 @@ class AnalysisWidget(_QWidget):
             _traceback.print_exc(file=_sys.stdout)
             return None
 
-    def first_integral_calculus_sw(self, meas, I2=False):
+    def integral_calculus_sw(self, meas, I2=False):
         """Calculates first field integral from stretched wire raw data.
 
         Args:
             cfg (MeasurementConfig): measurement configuration;
-            meas (MeasurementData): measurement data;
+            meas (MeasurementDataSW): measurement data;
             I2 (bool): False for first integral calculus,
                        True for second integral calculus.
 
@@ -330,7 +366,7 @@ class AnalysisWidget(_QWidget):
             _dt = meas.nplc/60  # seconds
             _duration = meas.duration  # seconds
 
-            _idx_0 = int(1 // _dt)  # initial integral index (1s)
+            _idx_0 = int(0.9 // _dt)  # initial integral index (1s)
             _idx_f = int((_duration - 1) // _dt)  # final integral index
 
             shape = meas.data_frw.shape
@@ -351,6 +387,10 @@ class AnalysisWidget(_QWidget):
             for j in range(shape[1]):
                 _f_f = _np.array([])
                 _f_b = _np.array([])
+#                 _offset_f = (meas.data_frw[:_idx_0].mean() +
+#                              meas.data_frw[_idx_f:].mean())/2
+#                 _offset_b = (meas.data_bck[:_idx_0].mean() +
+#                              meas.data_bck[_idx_f:].mean())/2
                 for idx in range(shape[0]):
                     # dv = ((v[i+1] - v[i])/2)/0.05
                     # f = np.append(f, f[i]+dv)
@@ -374,19 +414,24 @@ class AnalysisWidget(_QWidget):
             meas.I = (meas.I_f - meas.I_b) / 2
 
             meas.If = meas.I_f[_idx_f, :] - meas.I_f[_idx_0, :]
-            meas.If_std = meas.If.std()
+            meas.If_std = meas.If.std(ddof=1)
 
             meas.Ib = meas.I_b[_idx_f, :] - meas.I_b[_idx_0, :]
-            meas.Ib_std = meas.Ib.std()
+            meas.Ib_std = meas.Ib.std(ddof=1)
 
             integrals = meas.I[_idx_f, :] - meas.I[_idx_0, :]
-            meas.I_mean = integrals.mean()
-            meas.I_std = integrals.std()
-#             meas.I_mean = (meas.If.mean() - meas.Ib.mean())/2
-#             meas.I_std = 1/2 * (meas.If_std**2 + meas.Ib_std**2)**0.5
+
+            if not I2:
+                meas.I1_mean = integrals.mean()
+                meas.I1_std = integrals.std(ddof=1)
+                _amb_meas = self.amb_meas_sw
+            elif I2:
+                meas.I2_mean = integrals.mean()
+                meas.I2_std = integrals.std(ddof=1)
+                _amb_meas = self.amb_meas_sw2
 
             if meas.Iamb_id > 0:
-                self.amb_meas.db_update_database(
+                _amb_meas.db_update_database(
                     self.database_name,
                     mongo=self.mongo, server=self.server)
 
@@ -403,18 +448,57 @@ class AnalysisWidget(_QWidget):
     def ambient_field_calculus(self, meas):
         """Discounts ambient field from measurement and prints results."""
         try:
-            self.amb_meas.db_read(meas.Iamb_id)
-            if self.ui.rdb_fc.isChecked():
-                self.amb_cfg.db_read(self.amb_meas.cfg_id)
-            _result = '{:.2f} +/- {:.2f}'.format(meas.I_mean*10**6,
-                                                 meas.I_std*10**6)
+            if meas.mode == 'FC_I1' or meas.mode is None:
+                _amb_meas = _data.measurement.MeasurementDataFC()
+                _amb_meas.db_update_database(self.database_name,
+                    mongo=self.mongo, server=self.server)
+                _amb_meas.db_read(meas.Iamb_id)
+                self.amb_cfg.db_read(_amb_meas.cfg_id)
 
-            meas.I_mean = meas.I_mean - self.amb_meas.I_mean
-            meas.I_std = (meas.I_std**2 + self.amb_meas.I_std**2)**0.5
+                I_mean = meas.I1_mean*10**6   # T.m to G.cm
+                I_std = meas.I1_std*10**6   # T.m to G.cm
 
-            _result1 = '{:.2f} +/- {:.2f}'.format(self.amb_meas.I_mean*10**6,
-                                                  self.amb_meas.I_std*10**6)
-            _amb_name = self.amb_meas.name + ' / ' + str(self.amb_meas.idn)
+                meas.I1_mean = meas.I1_mean - _amb_meas.I1_mean
+                meas.I1_std = (meas.I1_std**2 + _amb_meas.I1_std**2)**0.5
+
+                Iamb_mean = _amb_meas.I1_mean*10**6   # T.m to G.cm
+                Iamb_std = _amb_meas.I1_std*10**6   # T.m to G.cm
+
+            if meas.mode == 'SW_I1' or meas.mode == 'sw':
+                _amb_meas = _data.measurement.MeasurementDataSW()
+                _amb_meas.db_update_database(self.database_name,
+                    mongo=self.mongo, server=self.server)
+                _amb_meas.db_read(meas.Iamb_id)
+
+                I_mean = meas.I1_mean*10**6   # T.m to G.cm
+                I_std = meas.I1_std*10**6   # T.m to G.cm
+
+                meas.I1_mean = meas.I1_mean - _amb_meas.I1_mean
+                meas.I1_std = (meas.I1_std**2 + _amb_meas.I1_std**2)**0.5
+
+                Iamb_mean = _amb_meas.I1_mean*10**6   # T.m to G.cm
+                Iamb_std = _amb_meas.I1_std*10**6   # T.m to G.cm
+
+            elif meas.mode == 'SW_I2':
+                _amb_meas = _data.measurement.MeasurementDataSW2()
+                _amb_meas.db_update_database(self.database_name,
+                    mongo=self.mongo, server=self.server)
+                _amb_meas.db_read(meas.Iamb_id)
+
+                I_mean = meas.I2_mean*10**5  # T.m2 to kG.cm2
+                I_std = meas.I2_std*10**5  # T.m2 to kG.cm2
+
+                meas.I2_mean = meas.I2_mean - _amb_meas.I2_mean
+                meas.I2_std = (meas.I2_std**2 + _amb_meas.I2_std**2)**0.5
+
+                Iamb_mean = _amb_meas.I2_mean*10**5  # T.m2 to kG.cm2
+                Iamb_std = _amb_meas.I2_std*10**5  # T.m2 to kG.cm2
+
+            _result = '{:.2f} +/- {:.2f}'.format(I_mean,
+                                                 I_std)
+            _result1 = '{:.2f} +/- {:.2f}'.format(Iamb_mean,
+                                                  Iamb_std)
+            _amb_name = _amb_meas.name + ' / ' + str(_amb_meas.idn)
 
             self.ui.le_Imeas.setText(_result)
             self.ui.le_Iamb.setText(_result1)
@@ -435,11 +519,18 @@ class AnalysisWidget(_QWidget):
                 _meas = self.meas_sw
                 _dt = _meas.nplc/60
                 _duration = _meas.duration
+                _y_label = 'First Field Integral [T.m]'
+            elif self.ui.rdb_sw_I2.isChecked():
+                _meas = self.meas_sw2
+                _dt = _meas.nplc/60
+                _duration = _meas.duration
+                _y_label = 'First Field Integral [T.m2]'
             else:
                 _meas = self.meas
                 _cfg = self.cfg
                 _dt = _cfg.nplc/60
                 _duration = _cfg.duration
+                _y_label = 'First Field Integral [T.m]'
 
             if hasattr(_meas, 'gain'):
                 gain = _meas.gain
@@ -453,7 +544,7 @@ class AnalysisWidget(_QWidget):
                 for i in range(_meas.I.shape[1]):
                     self.canvas.axes.plot(_t, _meas.I[:, i], label=str(i))
                 self.canvas.axes.set_xlabel('Time [s]')
-                self.canvas.axes.set_ylabel('First Field Integral [T.m]')
+                self.canvas.axes.set_ylabel(_y_label)
 
             elif self.ui.cmb_plot.currentText() == 'Forward Results':
                 for i in range(_meas.I_f.shape[1]):
@@ -461,7 +552,7 @@ class AnalysisWidget(_QWidget):
                     self.canvas.axes.plot(_t, _meas.I_f[:, i], _color + '-',
                                           label=str(i))
                 self.canvas.axes.set_xlabel('Time [s]')
-                self.canvas.axes.set_ylabel('First Field Integral [T.m]')
+                self.canvas.axes.set_ylabel(_y_label)
 
             elif self.ui.cmb_plot.currentText() == 'Backward Results':
                 for i in range(_meas.I_b.shape[1]):
@@ -469,7 +560,7 @@ class AnalysisWidget(_QWidget):
                     self.canvas.axes.plot(_t, _meas.I_b[:, i], _color + '-',
                                           label=str(i))
                 self.canvas.axes.set_xlabel('Time [s]')
-                self.canvas.axes.set_ylabel('First Field Integral [T.m]')
+                self.canvas.axes.set_ylabel(_y_label)
 
             elif self.ui.cmb_plot.currentText() == 'Forward/Backward Results':
                 for i in range(_meas.I_f.shape[1]):
@@ -478,14 +569,14 @@ class AnalysisWidget(_QWidget):
                                           label=str(i))
                     self.canvas.axes.plot(_t, _meas.I_b[:, i], _color + '--')
                 self.canvas.axes.set_xlabel('Time [s]')
-                self.canvas.axes.set_ylabel('First Field Integral [T.m]')
+                self.canvas.axes.set_ylabel(_y_label)
 
             elif self.ui.cmb_plot.currentText() == 'Forward Voltage':
                 for i in range(_meas.data_frw.shape[1]):
                     _color = 'C' + str(i)
                     self.canvas.axes.plot(_t, _meas.data_frw[:, i]/gain,
                                           _color + '-', label=str(i))
-                    _std = _meas.data_frw[:, i].std()
+                    _std = _meas.data_frw[:, i].std(ddof=1)
                     _min = _meas.data_frw[:, i].min()
                     _max = _meas.data_frw[:, i].max()
                     _vpp = _max - _min
@@ -500,7 +591,7 @@ class AnalysisWidget(_QWidget):
                     _color = 'C' + str(i)
                     self.canvas.axes.plot(_t, _meas.data_bck[:, i]/gain,
                                           _color + '-', label=str(i))
-                    _std = _meas.data_bck[:, i].std()
+                    _std = _meas.data_bck[:, i].std(ddof=1)
                     _min = _meas.data_bck[:, i].min()
                     _max = _meas.data_bck[:, i].max()
                     _vpp = _max - _min
@@ -589,14 +680,29 @@ class AnalysisWidget(_QWidget):
             self.canvas.figure.tight_layout()
             self.canvas.draw()
 
-            _result = '{:.2f} +/- {:.2f}'.format(_meas.I_mean*10**6,
-                                                 _meas.I_std*10**6)
-            _result_f = '{:.2f} +/- {:.2f}'.format(_meas.If.mean()*10**6,
-                                                   _meas.If_std*10**6)
-            _result_b = '{:.2f} +/- {:.2f}'.format(_meas.Ib.mean()*10**6,
-                                                   _meas.Ib_std*10**6)
+            if 'I1' in _meas.mode:
+                _result = '{:.2f} +/- {:.2f}'.format(_meas.I1_mean*10**6,
+                                                     _meas.I1_std*10**6)
+                _result_f = '{:.2f} +/- {:.2f}'.format(_meas.If.mean()*10**6,
+                                                       _meas.If_std*10**6)
+                _result_b = '{:.2f} +/- {:.2f}'.format(_meas.Ib.mean()*10**6,
+                                                       _meas.Ib_std*10**6)
+            elif 'I2' in _meas.mode:
+                _result = '{:.2f} +/- {:.2f}'.format(_meas.I2_mean*10**5,
+                                                     _meas.I2_std*10**5)
+                _result_f = '{:.2f} +/- {:.2f}'.format(_meas.If.mean()*10**5,
+                                                       _meas.If_std*10**5)
+                _result_b = '{:.2f} +/- {:.2f}'.format(_meas.Ib.mean()*10**5,
+                                                       _meas.Ib_std*10**5)
             self.ui.le_result.setText(_result)
             self.ui.le_result_f.setText(_result_f)
             self.ui.le_result_b.setText(_result_b)
         except Exception:
             _traceback.print_exc(file=_sys.stdout)
+
+    def stop_motors(self):
+        try:
+            self.motors.ppmac.write('#1..6k')
+        except Exception:
+            _traceback.print_exc(file=_sys.stdout)
+

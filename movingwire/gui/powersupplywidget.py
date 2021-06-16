@@ -89,6 +89,7 @@ class PowerSupplyWidget(_QDialog):
         self.ui.pbt_save_cfg.clicked.connect(self.save_cfg)
         self.ui.pbt_load_cfg.clicked.connect(self.load_cfg)
         self.ui.pbt_update_cfg.clicked.connect(self.update_cfg_list)
+        self.ui.pbt_stop_motors.clicked.connect(self.stop_motors)
 
     def update_cfg_list(self):
         """Updates configuration name list in combobox."""
@@ -574,5 +575,11 @@ class PowerSupplyWidget(_QDialog):
                 _QMessageBox.warning(self, 'Warning',
                                      'Interlocks could not be cleared.',
                                      _QMessageBox.Ok)
+        except Exception:
+            _traceback.print_exc(file=_sys.stdout)
+
+    def stop_motors(self):
+        try:
+            self.motors.ppmac.write('#1..6k')
         except Exception:
             _traceback.print_exc(file=_sys.stdout)

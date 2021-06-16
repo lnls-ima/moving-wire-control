@@ -68,7 +68,7 @@ class MovingWireApp(_QApplication):
         _MeasurementConfig = _data.configuration.MeasurementConfig(
             database_name=self.database_name,
             mongo=self.mongo, server=self.server)
-        _MeasurementData = _data.measurement.MeasurementData(
+        _MeasurementDataFC = _data.measurement.MeasurementDataFC(
             database_name=self.database_name,
             mongo=self.mongo, server=self.server)
         _MeasurementDataSW = _data.measurement.MeasurementDataSW(
@@ -85,7 +85,7 @@ class MovingWireApp(_QApplication):
         status.append(_PowerSupplyConfig.db_create_collection())
         status.append(_PpmacConfig.db_create_collection())
         status.append(_MeasurementConfig.db_create_collection())
-        status.append(_MeasurementData.db_create_collection())
+        status.append(_MeasurementDataFC.db_create_collection())
         status.append(_MeasurementDataSW.db_create_collection())
         status.append(_MeasurementDataSW2.db_create_collection())
 

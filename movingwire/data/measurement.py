@@ -5,11 +5,11 @@ import collections as _collections
 import imautils.db.database as _database
 
 
-class MeasurementData(_database.DatabaseAndFileDocument):
+class MeasurementDataFC(_database.DatabaseAndFileDocument):
     """Read, write and store moving wire measurement results data."""
 
     label = 'Measurement'
-    collection_name = 'measurements'
+    collection_name = 'measurements_fc_I1'
     db_dict = _collections.OrderedDict([
         ('idn', {'field': 'id', 'dtype': int, 'not_null': True}),
         ('date', {'field': 'date', 'dtype': str, 'not_null': True}),
@@ -20,10 +20,10 @@ class MeasurementData(_database.DatabaseAndFileDocument):
             {'field': 'name', 'dtype': str, 'not_null': True}),
         ('comments',
             {'field': 'comments', 'dtype': str, 'not_null': True}),
-        ('I_mean',
-            {'field': 'I_mean', 'dtype': float, 'not_null': True}),
-        ('I_std',
-            {'field': 'I_std', 'dtype': float, 'not_null': True}),
+        ('I1_mean',
+            {'field': 'I1_mean', 'dtype': float, 'not_null': True}),
+        ('I1_std',
+            {'field': 'I1_std', 'dtype': float, 'not_null': True}),
         ('data_frw',
             {'field': 'data_frw', 'dtype': _np.ndarray, 'not_null': True}),
         ('data_bck',
@@ -69,7 +69,7 @@ class MeasurementDataSW(_database.DatabaseAndFileDocument):
     #.velocidade, aceleração jerk
     #postions
     label = 'MeasurementSW'
-    collection_name = 'measurements_sw'
+    collection_name = 'measurements_sw_I1'
     db_dict = _collections.OrderedDict([
         ('idn', {'field': 'id', 'dtype': int, 'not_null': True}),
         ('date', {'field': 'date', 'dtype': str, 'not_null': True}),
@@ -82,10 +82,10 @@ class MeasurementDataSW(_database.DatabaseAndFileDocument):
             {'field': 'name', 'dtype': str, 'not_null': True}),
         ('comments',
             {'field': 'comments', 'dtype': str, 'not_null': True}),
-        ('I_mean',
-            {'field': 'I_mean', 'dtype': float, 'not_null': True}),
-        ('I_std',
-            {'field': 'I_std', 'dtype': float, 'not_null': True}),
+        ('I1_mean',
+            {'field': 'I1_mean', 'dtype': float, 'not_null': True}),
+        ('I1_std',
+            {'field': 'I1_std', 'dtype': float, 'not_null': True}),
         ('start_pos',
             {'field': 'start_pos', 'dtype': float, 'not_null': True}),
         ('end_pos',
@@ -98,6 +98,8 @@ class MeasurementDataSW(_database.DatabaseAndFileDocument):
             {'field': 'gain', 'dtype': float, 'not_null': True}),
         ('turns',
             {'field': 'turns', 'dtype': float, 'not_null': True}),
+        ('length',
+            {'field': 'length', 'dtype': float, 'not_null': True}),
         ('nplc',
             {'field': 'nplc', 'dtype': float, 'not_null': True}),
         ('duration',

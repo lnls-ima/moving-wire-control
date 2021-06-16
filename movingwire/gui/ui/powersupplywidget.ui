@@ -477,7 +477,7 @@
     <string>...</string>
    </property>
   </widget>
-  <widget class="QWidget" name="">
+  <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
      <x>420</x>
@@ -519,7 +519,7 @@
     </item>
    </layout>
   </widget>
-  <widget class="QWidget" name="">
+  <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
      <x>20</x>
@@ -575,6 +575,36 @@
      </widget>
     </item>
    </layout>
+  </widget>
+  <widget class="QPushButton" name="pbt_stop_motors">
+   <property name="geometry">
+    <rect>
+     <x>610</x>
+     <y>590</y>
+     <width>77</width>
+     <height>34</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <weight>75</weight>
+     <bold>true</bold>
+    </font>
+   </property>
+   <property name="text">
+    <string>Stop
+Motors</string>
+   </property>
+   <property name="icon">
+    <iconset>
+     <normaloff>../../resources/img/stop.svg</normaloff>../../resources/img/stop.svg</iconset>
+   </property>
+   <property name="iconSize">
+    <size>
+     <width>25</width>
+     <height>25</height>
+    </size>
+   </property>
   </widget>
  </widget>
  <resources/>

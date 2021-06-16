@@ -261,6 +261,18 @@
    </item>
   </layout>
  </widget>
+ <tabstops>
+  <tabstop>le_meas_name</tabstop>
+  <tabstop>le_comments</tabstop>
+  <tabstop>sb_repetitions</tabstop>
+  <tabstop>chb_Iamb</tabstop>
+  <tabstop>cmb_Iamb</tabstop>
+  <tabstop>chb_scan</tabstop>
+  <tabstop>cmb_scan_param</tabstop>
+  <tabstop>dsb_scan_start</tabstop>
+  <tabstop>dsb_scan_end</tabstop>
+  <tabstop>dsb_scan_step</tabstop>
+ </tabstops>
  <resources/>
  <connections>
   <connection>

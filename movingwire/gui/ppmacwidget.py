@@ -93,6 +93,7 @@ class PpmacWidget(_QWidget):
         self.ui.pbt_update_cfg.clicked.connect(self.update_cfg_list)
         self.ui.pbt_move_x.clicked.connect(self.move_x_ui)
         self.ui.pbt_move_y.clicked.connect(self.move_y_ui)
+        self.ui.pbt_stop_motors.clicked.connect(self.stop_motors)
 
     def update_position(self):
         """Updates position displays on ui."""
@@ -343,6 +344,14 @@ class PpmacWidget(_QWidget):
             True if successfull;
             False otherwise."""
         try:
+            _ans = _QMessageBox.question(self, 'Attention', 'Do you want to '
+                                         'home the X axis?',
+                                         _QMessageBox.Yes |
+                                         _QMessageBox.No,
+                                         _QMessageBox.No)
+            if _ans == _QMessageBox.No:
+                return False
+
             self.timer.stop()
 #             with _ppmac.lock_ppmac:
             _ppmac.write('#1,3j/')
@@ -367,6 +376,14 @@ class PpmacWidget(_QWidget):
             True if successfull;
             False otherwise"""
         try:
+            _ans = _QMessageBox.question(self, 'Attention', 'Do you want to '
+                                         'home the Y axis?',
+                                         _QMessageBox.Yes |
+                                         _QMessageBox.No,
+                                         _QMessageBox.No)
+            if _ans == _QMessageBox.No:
+                return False
+
             self.timer.stop()
 #             with _ppmac.lock_ppmac:
             _ppmac.write('#2,4j/')
@@ -549,3 +566,12 @@ class PpmacWidget(_QWidget):
         else:
             absolute = False
         self.move_y(position, absolute)
+
+    def stop_motors(self):
+        try:
+            self.timer.stop()
+            _ppmac.write('#1..6k')
+            self.timer.start(1000)
+        except Exception:
+            self.timer.start(1000)
+            _traceback.print_exc(file=_sys.stdout)
