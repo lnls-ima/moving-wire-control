@@ -755,7 +755,7 @@ class MeasurementWidget(_QWidget):
                                 continue
                         else:
                             if not move_axis(_end_pos, motor=moving_motor):
-                                move_axis(_init_pos)
+                                move_axis(_init_pos, motor=moving_motor)
                                 _sleep(duration + 10)
                                 _volt.get_readings_from_memory(5)
                                 continue
@@ -799,7 +799,7 @@ class MeasurementWidget(_QWidget):
                                 continue
                         else:
                             if not move_axis(_init_pos, motor=moving_motor):
-                                move_axis(_init_pos)
+                                move_axis(_init_pos, motor=moving_motor)
                                 _sleep(duration + 10)
                                 _volt.get_readings_from_memory(5)
                                 continue
