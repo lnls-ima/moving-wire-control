@@ -261,6 +261,8 @@ class AnalysisWidget(_QWidget):
                 self.ui.label_Iamb_name.setText('I2amb name / ID =')
 
             self.update_meas_list()
+            _counts = self.ui.cmb_meas_name.count() - 1
+            self.ui.cmb_meas_name.setCurrentIndex(_counts)
 
         except Exception:
             _traceback.print_exc(file=_sys.stdout)
@@ -420,6 +422,7 @@ class AnalysisWidget(_QWidget):
             meas.Ib_std = meas.Ib.std(ddof=1)
 
             integrals = meas.I[_idx_f, :] - meas.I[_idx_0, :]
+            meas.max_integral_diff = integrals.max() - integrals.min()
 
             if not I2:
                 meas.I1_mean = integrals.mean()

@@ -137,6 +137,8 @@ class PpmacConfig(_database.DatabaseAndFileDocument):
             {'field': 'max_y', 'dtype': float, 'not_null': True}),
         ('y_sf',
             {'field': 'y_sf', 'dtype': float, 'not_null': True}),
+        ('y_stps_per_cnt',
+            {'field': 'y_stps_per_cnt', 'dtype': float, 'not_null': True}),
         ('home_offset1',
             {'field': 'home_offset1', 'dtype': int, 'not_null': True}),
         ('home_offset2',
@@ -149,6 +151,8 @@ class PpmacConfig(_database.DatabaseAndFileDocument):
             {'field': 'home_offset5', 'dtype': int, 'not_null': True}),
         ('home_offset6',
             {'field': 'home_offset6', 'dtype': int, 'not_null': True}),
+        ('max_pos_error',
+            {'field': 'max_pos_error', 'dtype': float, 'not_null': True}),
     ])
 
     def __init__(self, database_name=None, mongo=False, server=None):

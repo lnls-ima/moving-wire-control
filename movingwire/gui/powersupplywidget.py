@@ -580,6 +580,6 @@ class PowerSupplyWidget(_QDialog):
 
     def stop_motors(self):
         try:
-            self.motors.ppmac.write('#1..6k')
+            self.motors.ppmac.stop_motors()
         except Exception:
             _traceback.print_exc(file=_sys.stdout)

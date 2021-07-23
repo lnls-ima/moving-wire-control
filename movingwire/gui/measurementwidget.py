@@ -139,6 +139,7 @@ class MeasurementWidget(_QWidget):
             _sleep(5)
             pos7b, pos8b = _ppmac.read_motor_pos([7, 8])
             print(pos7b, pos8b)
+            _ppmac.read()
             self.motors.timer.start(1000)
         except Exception:
             _traceback.print_exc(file=_sys.stdout)
@@ -423,6 +424,7 @@ class MeasurementWidget(_QWidget):
                     else:
                         name = (name + _time.strftime('_%y%m%d_%H%M'))
                     _meas.name = name
+                    _meas.date = _time.strftime('%Y-%m-%d')
                     _meas.hour = _time.strftime('%H:%M:%S')
                     if _meas.mode == 'SW_I2':
                         _measure_integral(I2=True)
@@ -562,6 +564,7 @@ class MeasurementWidget(_QWidget):
                         name = self.dialog.ui.le_meas_name.text()
                         name = (name + '_' + self.cfg.direction + p_str +
                                 _time.strftime('_%y%m%d_%H%M'))
+                        _meas.date = _time.strftime('%Y-%m-%d')
                         _meas.hour = _time.strftime('%H:%M:%S')
                         _meas.name = name
 
@@ -623,6 +626,7 @@ class MeasurementWidget(_QWidget):
             start = _meas.start_pos
             end = _meas.end_pos
             step = _meas.step
+            npoints = int(_np.ceil(duration/(nplc/60)))
 
             if end < start:
                 _QMessageBox.information(self, 'Warning',
@@ -642,8 +646,7 @@ class MeasurementWidget(_QWidget):
                     n_steps = int(1 + _np.ceil((end-start) / step))
                     # warning if n_steps is not an integer?
                     # check if start and end pos are inside limits
-                    _meas.transversal_pos = _np.linspace(start, end,
-                                                                n_steps)
+                    _meas.transversal_pos = _np.linspace(start, end, n_steps)
 
             # PPMAC configurations
             ppmac_cfg = self.motors.cfg
@@ -652,32 +655,34 @@ class MeasurementWidget(_QWidget):
                 accel = ppmac_cfg.accel_x  # [mm/s^2]
                 jerk = ppmac_cfg.jerk_x  # [mm/s^3]
                 _meas.y_pos = self.motors.ui.dsb_pos_y.value()
-                _ppmac.write('#2,4,5,6k')
-                _ppmac.write('#1,3j/')
+                _ppmac.enable_motors([1, 3])
+                # _ppmac.write('#2,4,5,6k')
+                # _ppmac.write('#1,3j/')
                 move_axis = self.motors.move_x
                 sf = self.motors.cfg.x_sf
                 if 'a' in motion_axis:
-                    moving_motor = '1'
-                    static_motor = '3'
+                    moving_motor = 1  # '1'
+                    static_motor = 3  # '3'
                 elif 'b' in motion_axis:
-                    moving_motor = '3'
-                    static_motor = '1'
+                    moving_motor = 3  # '3'
+                    static_motor = 1  # '1'
 
             elif 'Y' in motion_axis:
                 speed = ppmac_cfg.speed_y  # [mm/s]
                 accel = ppmac_cfg.accel_y  # [mm/s^2]
                 jerk = ppmac_cfg.jerk_y  # [mm/s^3]
                 _meas.x_pos = self.motors.ui.dsb_pos_x.value()
-                _ppmac.write('#1,3,5,6k')
-                _ppmac.write('#2,4j/')
+                _ppmac.enable_motors([2, 4])
+                # _ppmac.write('#1,3,5,6k')
+                # _ppmac.write('#2,4j/')
                 move_axis = self.motors.move_y
-                sf = self.motors.cfg.y_sf
+                sf = self.motors.cfg.y_sf/self.motors.cfg.y_stps_per_cnt  # [mm/steps]
                 if 'a' in motion_axis:
-                    moving_motor = '2'
-                    static_motor = '4'
+                    moving_motor = 2  # '2'
+                    static_motor = 4  # '4'
                 elif 'b' in motion_axis:
-                    moving_motor = '4'
-                    static_motor = '2'
+                    moving_motor = 4  # '4'
+                    static_motor = 2  # '2'
 
             self.motors.configure_ppmac()
 
@@ -686,7 +691,7 @@ class MeasurementWidget(_QWidget):
             _meas.jerk = jerk
 
             _prg_dialog = _QProgressDialog('Measurement', 'Abort', 0,
-                                           nmeasurements + 1, self)
+                                           nmeasurements, self)
             _prg_dialog.setWindowTitle('Measurement Progress')
             _prg_dialog.show()
             _QApplication.processEvents()
@@ -703,6 +708,7 @@ class MeasurementWidget(_QWidget):
             for position in _meas.transversal_pos:
                 name = _meas.name.split('_')[:-2]
                 _meas.name = '_'.join(name) + _time.strftime('_%y%m%d_%H%M')
+                _meas.date = _time.strftime('%Y-%m-%d')
                 _meas.hour = _time.strftime('%H:%M:%S')
                 _init_pos = position - step/2  # [mm]
                 _end_pos = position + step/2  # [mm]
@@ -713,84 +719,117 @@ class MeasurementWidget(_QWidget):
                 data_frw_aux = _np.array([])
                 data_bck_aux = _np.array([])
 
+                # go to init pos
+                if not I2:
+                    move_axis(_init_pos)
+                    move_axis(_init_pos)
+                else:
+                    move_axis(position)
+                    move_axis(_init_pos, motor=moving_motor)
+
                 for i in range(_meas.nmeasurements):
-                    if _prg_dialog.wasCanceled():
-                        _prg_dialog.destroy()
-                        _ppmac.flag_abort = True
-                        raise RuntimeError('Measurement aborted.')
+                    for j in range(4):
+                        if j == 3:
+                            _prg_dialog.destroy()
+                            _ppmac.flag_abort = True
+                            raise RuntimeError('Measurement aborted after 3 '
+                                               'consecutive moving errors.')
 
-                    # Forward measurement
-                    # go to init pos
-                    if not I2:
-                        move_axis(_init_pos)
-                    else:
-                        _msg = ('#' + static_motor + 'j=' + str(position/sf) +
-                                ';' + '#' + moving_motor + 'j=' +
-                                str(_init_pos/sf) + '\n')
-                        _ppmac.write(_msg)
-                    _sleep(3)  # wait vibrations damping
-                    _volt.start_measurement()
-#                     _ppmac.write('Gather.PhaseEnable=2')
-                    _t0 = _time.time()
-                    _sleep(1)
-                    # move step
-                    if not I2:
-                        move_axis(_end_pos)
-                    else:
-                        _msg = ('#' + static_motor + 'j=' + str(position/sf) +
-                                ';' + '#' + moving_motor + 'j=' +
-                                str(_end_pos/sf) + '\n')
-                        _ppmac.write(_msg)
-                    _sleep(duration)
-#                     _ppmac.write('Gather.PhaseEnable=0')
-#                     _ppmac.ppmac_ssh.send(
-#                         'gather -p -u /var/ftp/gather/frw{}.dat\r\n'.format(i))
+                        if _prg_dialog.wasCanceled():
+                            _prg_dialog.destroy()
+                            _ppmac.flag_abort = True
+                            raise RuntimeError('Measurement aborted.')
 
-                    # if _time.time() - _t0 <= duration + 1:
-                    if _time.time() - _t0 <= duration + 3:
-                        _sleep(duration + 1 + _t0 - _time.time())
+                        # Forward measurement
+                        # _sleep(3)  # wait vibrations damping
+                        _volt.start_measurement()
+    #                     _ppmac.write('Gather.PhaseEnable=2')
+                        _t0 = _time.time()
+                        _sleep(1)
+                        # move step
+                        if not I2:
+                            if not move_axis(_end_pos):
+                                move_axis(_init_pos)
+                                _sleep(duration + 10)
+                                _volt.get_readings_from_memory(5)
+                                continue
+                        else:
+                            if not move_axis(_end_pos, motor=moving_motor):
+                                move_axis(_init_pos)
+                                _sleep(duration + 10)
+                                _volt.get_readings_from_memory(5)
+                                continue
+                        # _sleep(duration)
+    #                     _ppmac.write('Gather.PhaseEnable=0')
+    #                     _ppmac.ppmac_ssh.send(
+    #                         'gather -p -u /var/ftp/gather/frw{}.dat\r\n'.format(i))
 
-                    _data = _volt.get_readings_from_memory(5)[::-1]
+                        # if _time.time() - _t0 <= duration + 1:
+                        if _time.time() - _t0 <= duration + 3:
+                            _sleep(0.2)
+
+                        # while _volt.get_data_count() < int(
+                        #                             _np.ceil(duration/(nplc/60))):
+                        #     _sleep(1)
+
+                        data_count = _volt.get_data_count()
+                        if data_count < npoints:
+                            _sleep(0.5)
+                        _data_frw = _volt.get_readings_from_memory(5)[::-1]
+
+                        if _prg_dialog.wasCanceled():
+                            _prg_dialog.destroy()
+                            _ppmac.flag_abort = True
+                            raise RuntimeError('Measurement aborted.')
+
+                        # comment to minimize  temperature difference
+                        # _sleep(3)
+
+                        # Backward measurement
+                        _volt.start_measurement()
+    #                     _ppmac.write('Gather.PhaseEnable=2')
+                        _t0 = _time.time()
+                        _sleep(1)
+                        # move - step
+                        if not I2:
+                            if not move_axis(_init_pos):
+                                move_axis(_init_pos)
+                                _sleep(duration + 10)
+                                _volt.get_readings_from_memory(5)
+                                continue
+                        else:
+                            if not move_axis(_init_pos, motor=moving_motor):
+                                move_axis(_init_pos)
+                                _sleep(duration + 10)
+                                _volt.get_readings_from_memory(5)
+                                continue
+                        # _sleep(duration)
+    #                     _ppmac.write('Gather.PhaseEnable=0')
+    #                     _ppmac.ppmac_ssh.send(
+    #                         'gather -p -u /var/ftp/gather/bck{}.dat\r\n'.format(i))
+
+                        # if _time.time() - _t0 <= duration + 1:
+                        if _time.time() - _t0 <= duration + 3:
+                            _sleep(0.2)
+
+                        # while _volt.get_data_count() < int(
+                        #                             _np.ceil(duration/(nplc/60))):
+                        #     _sleep(1)
+
+                        # print(_volt.get_data_count())
+                        # _sleep(5)
+                        data_count = _volt.get_data_count()
+                        if data_count < npoints:
+                            _sleep(0.5)
+                        _data_bck = _volt.get_readings_from_memory(5)[::-1]
+                        break
+
                     if i == 0:
-                        data_frw_aux = _np.append(data_frw_aux, _data)
+                        data_bck_aux = _np.append(data_bck_aux, _data_bck)
+                        data_frw_aux = _np.append(data_frw_aux, _data_frw)
                     else:
-                        data_frw_aux = _np.vstack([data_frw_aux, _data])
-
-                    if _prg_dialog.wasCanceled():
-                        _prg_dialog.destroy()
-                        _ppmac.flag_abort = True
-                        raise RuntimeError('Measurement aborted.')
-
-                    _sleep(3)
-
-                    # Backward measurement
-                    _volt.start_measurement()
-#                     _ppmac.write('Gather.PhaseEnable=2')
-                    _t0 = _time.time()
-                    _sleep(1)
-                    # move - step
-                    if not I2:
-                        move_axis(_init_pos)
-                    else:
-                        _msg = ('#' + static_motor + 'j=' + str(position/sf) +
-                                ';' + '#' + moving_motor + 'j=' +
-                                str(_init_pos/sf) + '\n')
-                        _ppmac.write(_msg)
-                    _sleep(duration)
-#                     _ppmac.write('Gather.PhaseEnable=0')
-#                     _ppmac.ppmac_ssh.send(
-#                         'gather -p -u /var/ftp/gather/bck{}.dat\r\n'.format(i))
-
-                    # if _time.time() - _t0 <= duration + 1:
-                    if _time.time() - _t0 <= duration + 3:
-                        _sleep(duration + 1 + _t0 - _time.time())
-
-                    _data = _volt.get_readings_from_memory(5)[::-1]
-
-                    if i == 0:
-                        data_bck_aux = _np.append(data_bck_aux, _data)
-                    else:
-                        data_bck_aux = _np.vstack([data_bck_aux, _data])
+                        data_bck_aux = _np.vstack([data_bck_aux, _data_bck])
+                        data_frw_aux = _np.vstack([data_frw_aux, _data_frw])
                     _prg_dialog.setValue(i+1)
 
                 # data[i, j]
@@ -806,11 +845,13 @@ class MeasurementWidget(_QWidget):
                 _count = self.analysis.cmb_meas_name.count() - 1
                 self.analysis.cmb_meas_name.setCurrentIndex(_count)
 
+            move_axis(position)
             self.motors.timer.start(1000)
             _prg_dialog.destroy()
             return True
 
         except Exception:
+            _prg_dialog.destroy()
             _traceback.print_exc(file=_sys.stdout)
             _QMessageBox.information(self, 'Warning',
                                      'Measurement Failed.',
@@ -852,6 +893,11 @@ class MeasurementWidget(_QWidget):
 #             ts = 0  # jerk time [ms]
 #             wait = 2000  # time to wait between moves [ms]
             _dir = 1 if self.cfg.direction == 'ccw' else -1
+
+            name = self.meas.name.split('_')[:-2]
+            self.meas.name = '_'.join(name) + _time.strftime('_%y%m%d_%H%M')
+            self._meas.date = _time.strftime('%Y-%m-%d')
+            self._meas.hour = _time.strftime('%H:%M:%S')
 
             _prg_dialog = _QProgressDialog('Measurement', 'Abort', 0,
                                            self.cfg.nmeasurements + 1, self)
@@ -1036,7 +1082,8 @@ class MeasurementWidget(_QWidget):
             return False
 
     def stop_motors(self):
+        """Stops and disables all motors."""
         try:
-            self.motors.ppmac.write('#1..6k')
+            self.motors.ppmac.stop_motors()
         except Exception:
             _traceback.print_exc(file=_sys.stdout)

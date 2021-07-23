@@ -18,6 +18,9 @@
     <layout class="QGridLayout" name="gridLayout_2">
      <item row="1" column="3">
       <widget class="QLCDNumber" name="lcd_pos5">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
        <property name="sizePolicy">
         <sizepolicy hsizetype="Minimum" vsizetype="Maximum">
          <horstretch>0</horstretch>
@@ -37,6 +40,9 @@
      </item>
      <item row="0" column="3">
       <widget class="QLabel" name="label_15">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
        <property name="sizePolicy">
         <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
          <horstretch>0</horstretch>
@@ -115,6 +121,9 @@
      </item>
      <item row="2" column="3">
       <widget class="QLCDNumber" name="lcd_pos6">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
        <property name="sizePolicy">
         <sizepolicy hsizetype="Minimum" vsizetype="Maximum">
          <horstretch>0</horstretch>
@@ -390,6 +399,9 @@
     <layout class="QVBoxLayout" name="verticalLayout">
      <item>
       <widget class="QGroupBox" name="groupBox">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
        <property name="title">
         <string>Rotation Control</string>
        </property>
@@ -590,7 +602,7 @@
           <item row="2" column="0">
            <widget class="QRadioButton" name="rdb_inc_xy">
             <property name="enabled">
-             <bool>false</bool>
+             <bool>true</bool>
             </property>
             <property name="text">
              <string>Incremental</string>
@@ -788,10 +800,142 @@
      <layout class="QGridLayout" name="gridLayout_12">
       <item row="0" column="0">
        <layout class="QGridLayout" name="gridLayout_11">
+        <item row="3" column="0">
+         <widget class="QLabel" name="label_28">
+          <property name="text">
+           <string>Y negative limit [mm]:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QDoubleSpinBox" name="dsb_accel_y">
+          <property name="value">
+           <double>6.000000000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item row="6" column="1">
+         <widget class="QDoubleSpinBox" name="dsb_y_stps_per_cnt">
+          <property name="maximum">
+           <double>999.899999999999977</double>
+          </property>
+          <property name="value">
+           <double>102.400000000000006</double>
+          </property>
+         </widget>
+        </item>
+        <item row="8" column="0">
+         <widget class="QLabel" name="label_24">
+          <property name="text">
+           <string>Motor 2 Encoder Ref [counts]:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QDoubleSpinBox" name="dsb_speed_y">
+          <property name="maximum">
+           <double>100.000000000000000</double>
+          </property>
+          <property name="singleStep">
+           <double>0.100000000000000</double>
+          </property>
+          <property name="value">
+           <double>0.600000000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item row="8" column="1">
+         <widget class="QSpinBox" name="sb_home_offset2">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="maximum">
+           <number>360000</number>
+          </property>
+         </widget>
+        </item>
+        <item row="2" column="1">
+         <widget class="QDoubleSpinBox" name="dsb_jerk_y"/>
+        </item>
+        <item row="2" column="0">
+         <widget class="QLabel" name="label_23">
+          <property name="text">
+           <string>Jerk [mm/s^3]:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="label_22">
+          <property name="text">
+           <string>Acceleration [mm/s^2]:</string>
+          </property>
+         </widget>
+        </item>
         <item row="4" column="0">
          <widget class="QLabel" name="label_29">
           <property name="text">
            <string>Y positive limit [mm]:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="0">
+         <widget class="QLabel" name="label_31">
+          <property name="text">
+           <string>Y scale factor [mm/count]:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="9" column="0">
+         <widget class="QLabel" name="label_25">
+          <property name="text">
+           <string>Motor 4 Encoder Ref [counts]:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="6" column="0">
+         <widget class="QLabel" name="label_36">
+          <property name="text">
+           <string>Y scale factor 2 [steps/count]:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="1">
+         <widget class="QDoubleSpinBox" name="dsb_max_y">
+          <property name="minimum">
+           <double>-15.000000000000000</double>
+          </property>
+          <property name="maximum">
+           <double>15.000000000000000</double>
+          </property>
+          <property name="value">
+           <double>15.000000000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="0">
+         <widget class="QLabel" name="label_21">
+          <property name="text">
+           <string>Speed [mm/s]:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="1">
+         <widget class="QDoubleSpinBox" name="dsb_y_sf">
+          <property name="decimals">
+           <number>5</number>
+          </property>
+          <property name="value">
+           <double>0.000020000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item row="9" column="1">
+         <widget class="QSpinBox" name="sb_home_offset4">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="maximum">
+           <number>360000</number>
           </property>
          </widget>
         </item>
@@ -808,118 +952,17 @@
           </property>
          </widget>
         </item>
-        <item row="0" column="1">
-         <widget class="QDoubleSpinBox" name="dsb_speed_y">
-          <property name="maximum">
-           <double>100.000000000000000</double>
-          </property>
-          <property name="singleStep">
-           <double>0.100000000000000</double>
-          </property>
-          <property name="value">
-           <double>0.200000000000000</double>
-          </property>
-         </widget>
-        </item>
-        <item row="6" column="1">
-         <widget class="QSpinBox" name="sb_home_offset2">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="maximum">
-           <number>360000</number>
-          </property>
-         </widget>
-        </item>
         <item row="7" column="1">
-         <widget class="QSpinBox" name="sb_home_offset4">
-          <property name="enabled">
-           <bool>false</bool>
-          </property>
-          <property name="maximum">
-           <number>360000</number>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="0">
-         <widget class="QLabel" name="label_21">
-          <property name="text">
-           <string>Speed [mm/s]:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="7" column="0">
-         <widget class="QLabel" name="label_25">
-          <property name="text">
-           <string>Motor 4 Encoder Ref [counts]:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="0">
-         <widget class="QLabel" name="label_22">
-          <property name="text">
-           <string>Acceleration [mm/s^2]:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="1">
-         <widget class="QDoubleSpinBox" name="dsb_jerk_y"/>
-        </item>
-        <item row="4" column="1">
-         <widget class="QDoubleSpinBox" name="dsb_max_y">
-          <property name="minimum">
-           <double>-15.000000000000000</double>
-          </property>
-          <property name="maximum">
-           <double>15.000000000000000</double>
-          </property>
-          <property name="value">
-           <double>15.000000000000000</double>
-          </property>
-         </widget>
-        </item>
-        <item row="1" column="1">
-         <widget class="QDoubleSpinBox" name="dsb_accel_y">
+         <widget class="QDoubleSpinBox" name="dsb_max_pos_error">
           <property name="value">
            <double>2.000000000000000</double>
           </property>
          </widget>
         </item>
-        <item row="6" column="0">
-         <widget class="QLabel" name="label_24">
+        <item row="7" column="0">
+         <widget class="QLabel" name="label_37">
           <property name="text">
-           <string>Motor 2 Encoder Ref [counts]:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="3" column="0">
-         <widget class="QLabel" name="label_28">
-          <property name="text">
-           <string>Y negative limit [mm]:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="0">
-         <widget class="QLabel" name="label_23">
-          <property name="text">
-           <string>Jerk [mm/s^3]:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="5" column="0">
-         <widget class="QLabel" name="label_31">
-          <property name="text">
-           <string>Y scale factor [mm/count]:</string>
-          </property>
-         </widget>
-        </item>
-        <item row="5" column="1">
-         <widget class="QDoubleSpinBox" name="dsb_y_sf">
-          <property name="decimals">
-           <number>5</number>
-          </property>
-          <property name="value">
-           <double>0.000020000000000</double>
+           <string>Maximum positioning error [um]:</string>
           </property>
          </widget>
         </item>

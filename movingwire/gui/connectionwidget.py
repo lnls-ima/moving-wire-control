@@ -103,7 +103,7 @@ class ConnectionWidget(_QWidget):
 
             self.ui.pbt_connect.setEnabled(False)
             self.ui.pbt_disconnect.setEnabled(True)
-            for i in range(1, self.parent_window.ui.twg_main.count() - 1):
+            for i in range(1, self.parent_window.ui.twg_main.count() - 2):
                 self.parent_window.ui.twg_main.setTabEnabled(i, True)
 
             return True
@@ -133,7 +133,7 @@ class ConnectionWidget(_QWidget):
 
             self.ui.pbt_connect.setEnabled(True)
             self.ui.pbt_disconnect.setEnabled(False)
-            for i in range(1, self.parent_window.ui.twg_main.count() - 1):
+            for i in range(1, self.parent_window.ui.twg_main.count() - 2):
                 self.parent_window.ui.twg_main.setTabEnabled(i, False)
 
             return True

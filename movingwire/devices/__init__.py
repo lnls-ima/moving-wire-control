@@ -15,6 +15,7 @@ import socket as _socket
 from movingwire.gui.utils import (
     sleep as _sleep,
     )
+from pickle import TRUE
 
 
 class MultiChannel(_Agilent34970ALib.Agilent34970AGPIB):
@@ -114,8 +115,12 @@ class Multimeter(_Agilent3458ALib.Agilent3458AGPIB):
         volt.send_command('TRIG SGL')
 
     def get_data_count(self):
-        volt.send_command(volt.commands.mcount)
-        return int(volt.read_from_device().strip('\r\n'))
+        try:
+            volt.send_command(volt.commands.mcount)
+            _sleep(0.2)
+            return int(volt.read_from_device().strip('\r\n'))
+        except Exception:
+            _traceback.print_exc(file=_sys.stdout)
 
     def error_query(self):
         volt.send_command('ERR?')
@@ -152,15 +157,35 @@ class Ppmac(Ppmac_eth):
         super().__init__()
         self.lock_ppmac = _threading.RLock()
         self.flag_abort = False
+        self.motor_vars = {0: 'AmpFault',
+                           1: 'LimitStop',
+                           2: 'PlusLimit',
+                           3: 'MinusLimit',
+                           4: 'DesVelZero',
+                           5: 'JogSpeed',
+                           6: 'JogTa',
+                           7: 'JogTs',
+                           8: 'BlSize',
+                           9: 'BlSlewRate',
+                           10: 'HomeOffset',
+                           }
 
-    def motor_stopped(self, n=5):
-#         with self.lock_ppmac:
+    def motor_stopped(self, motor):
+        """Checks if the motor is stopped.
+
+        Args:
+            motor (int): motor number (Xa=1, Ya=2, Xb=3, Yb=4, Ra=5, Rb=6);
+        Returns:
+            True if the motor is stopped;
+            False otherwise.
+        """
         try:
-            msg = 'Motor[' + str(n) + '].DesVelZero'
-            self.write(msg)
-            _sleep(0.1)
-            ans = self.read().split(msg)[-1]
-            return int(ans.split(msg)[-1].split('=')[-1].split('\r')[0])
+            _ans = float(self.query_motor_param(motor, self.motor_vars[4]))
+            _ans = round(_ans)
+            if _ans:
+                return True
+            else:
+                return False
         except Exception:
             _traceback.print_exc(file=_sys.stdout)
             return None
@@ -178,7 +203,15 @@ class Ppmac(Ppmac_eth):
             return None
 
     def read_motor_pos(self, motors=[]):
-#         with self.lock_ppmac:
+        """Reads motor(s) position(s).
+
+        Args:
+            motors (list): list of motor numbers (int), must be in ascending order;
+
+        Returns:
+            positions (numpy array): array with the motor positions.
+        """
+
         try:
             msg = '#'
             msg = msg + str(motors).strip('[]').replace(' ', '')
@@ -211,13 +244,15 @@ class Ppmac(Ppmac_eth):
             return None
 
     def motor_homed(self, motor):
-#         with self.lock_ppmac:
+        """Checks if a motor is homed or not.
+
+        Args:
+            motor (int): motor number (Xa=1, Ya=2, Xb=3, Yb=4, Ra=5, Rb=6);
+        Returns:
+            True if the motor is homed;
+            False otherwise.
+        """
         try:
-#             try:
-            self.read()
-#             except _socket.timeout:
-#                 pass
-            _sleep(1)
             self.write("Motor{0}Homed".format(motor))
             _ans = self.read()
             if int(_ans.split('=')[-1].strip('\r\n\x06')):
@@ -227,6 +262,121 @@ class Ppmac(Ppmac_eth):
         except Exception:
             _traceback.print_exc(file=_sys.stdout)
             return None
+
+    def query_motor_param(self, motor, param):
+        """Queries for a motor parameter.
+
+        Args:
+            motor (int): motor number (Xa=1, Ya=2, Xb=3, Yb=4, Ra=5, Rb=6);
+            param (str): parameter name.
+        Returns:
+            variable value (str)"""
+        try:
+            self.write("Motor[{0}].{1}".format(motor, param))
+            _sleep(0.1)
+            _ans = self.read()
+            return _ans.split('=')[-1].strip('\r\n\x06')
+        except Exception:
+            _traceback.print_exc(file=_sys.stdout)
+            return None
+
+    def set_motor_param(self, motor, param, value):
+        """Sets and checks a motor parameter.
+
+        Args:
+            motor (int): motor number (Xa=1, Ya=2, Xb=3, Yb=4, Ra=5, Rb=6);
+            param (str): parameter name;
+            value (float): parameter value.
+        Returns:
+            True if successfull, False otherwise"""
+        try:
+            self.write("Motor[{0}].{1}={2}".format(motor, param, value))
+            _sleep(0.1)
+            _ans = self.read()
+            _ans = _ans.split('=')[-1].strip('\r\n\x06')
+            if value - 1e-3 <= _ans <= value + 1e-3:
+                return True
+            else:
+                return False
+
+        except Exception:
+            _traceback.print_exc(file=_sys.stdout)
+            return None
+
+    def motor_fault(self, motor):
+        """Checks if the motor amplifier has a fault.
+
+        Args:
+            motor (int): motor number (Xa=1, Ya=2, Xb=3, Yb=4, Ra=5, Rb=6);
+        Returns:
+            True if the amplifier is faulted;
+            False otherwise.
+        """
+        try:
+            _ans = int(self.query_motor_param(motor, self.motor_vars[0]))
+            if _ans:
+                return True
+            else:
+                return False
+        except Exception:
+            _traceback.print_exc(file=_sys.stdout)
+            return None
+
+    def motor_limits(self, motor):
+        """Checks if a motor limit switch is active.
+
+        Args:
+            motor (int): motor number (Xa=1, Ya=2, Xb=3, Yb=4, Ra=5, Rb=6);
+        Returns:
+            True if there's a limit switch active;
+            False otherwise.
+        """
+        try:
+            _ans = int(self.query_motor_param(motor, self.motor_vars[1]))
+            if _ans:
+                return True
+            else:
+                return False
+        except Exception:
+            _traceback.print_exc(file=_sys.stdout)
+            return None
+
+    def enable_motors(self, motors=[]):
+        """Enables listed motor(s), disabling the others.
+
+        Args:
+            motors (list): list of motor numbers (int) to enable, must be in
+                           ascending order;
+
+        Returns:
+            True if successfull; False otherwise.
+        """
+        try:
+            disable_list = [1, 2, 3, 4, 5, 6]
+            for m in motors:
+                disable_list.remove(m)
+            disable = str(disable_list).strip('[]').replace(' ', '')
+            enable = str(motors).strip('[]').replace(' ', '')
+            self.write('#{0}k'.format(disable))
+            self.write('#{0}j/'.format(enable))
+            return True
+        except Exception:
+            _traceback.print_exc(file=_sys.stdout)
+            return False
+
+    def stop_motors(self):
+        """Stops and disables all motors.
+
+            Returns:
+                True if successful, False otherwise.
+                """
+        try:
+            self.motors.ppmac.write('#1..6k')
+            self.motors.ppmac.read()
+            return True
+        except Exception:
+            _traceback.print_exc(file=_sys.stdout)
+            return False
 
     def remove_backlash(self, target_pos=0, elim=2, ccw=1, max_tries=100):
         try:
