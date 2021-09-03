@@ -44,6 +44,10 @@ class MeasurementDataFC(_database.DatabaseAndFileDocument):
             {'field': 'x_pos', 'dtype': _np.ndarray, 'not_null': True}),
         ('y_pos',
             {'field': 'y_pos', 'dtype': _np.ndarray, 'not_null': True}),
+        ('acq_init_interval',  # [s]
+            {'field': 'acq_init_interval', 'dtype': float, 'not_null': False}),
+        ('acq_final_interval',  # [s]
+            {'field': 'acq_final_interval', 'dtype': float, 'not_null': False}),
     ])
 
     def __init__(
@@ -87,9 +91,9 @@ class MeasurementDataSW(_database.DatabaseAndFileDocument):
         ('I1_std',
             {'field': 'I1_std', 'dtype': float, 'not_null': True}),
         ('start_pos',
-            {'field': 'start_pos', 'dtype': float, 'not_null': True}),
+            {'field': 'start_pos', 'dtype': float, 'not_null': False}),
         ('end_pos',
-            {'field': 'end_pos', 'dtype': float, 'not_null': True}),
+            {'field': 'end_pos', 'dtype': float, 'not_null': False}),
         ('step',
             {'field': 'step', 'dtype': float, 'not_null': True}),
         ('motion_axis',
@@ -122,6 +126,10 @@ class MeasurementDataSW(_database.DatabaseAndFileDocument):
             {'field': 'x_pos', 'dtype': float, 'not_null': True}),
         ('y_pos',
             {'field': 'y_pos', 'dtype': float, 'not_null': True}),
+        ('acq_init_interval',  # [s]
+            {'field': 'acq_init_interval', 'dtype': float, 'not_null': False}),
+        ('acq_final_interval',  # [s]
+            {'field': 'acq_final_interval', 'dtype': float, 'not_null': False}),
     ])
 
     def __init__(
@@ -197,6 +205,104 @@ class MeasurementDataSW2(_database.DatabaseAndFileDocument):
             {'field': 'x_pos', 'dtype': float, 'not_null': True}),
         ('y_pos',
             {'field': 'y_pos', 'dtype': float, 'not_null': True}),
+        ('acq_init_interval',  # [s]
+            {'field': 'acq_init_interval', 'dtype': float, 'not_null': False}),
+        ('acq_final_interval',  # [s]
+            {'field': 'acq_final_interval', 'dtype': float, 'not_null': False}),
+    ])
+
+    def __init__(
+            self, database_name=None, mongo=False, server=None):
+        """Initialize object.
+
+        Args:
+            filename (str): connection configuration filepath.
+            database_name (str): database file path (sqlite) or name (mongo).
+            idn (int): id in database table (sqlite) / collection (mongo).
+            mongo (bool): flag indicating mongoDB (True) or sqlite (False).
+            server (str): MongoDB server.
+
+        """
+        super().__init__(
+            database_name=database_name, mongo=mongo, server=server)
+
+
+class IntegralMaps(_database.DatabaseAndFileDocument):
+    """Read, write and store stretched wire integrals map data."""
+
+    label = 'IntegralMaps'
+    collection_name = 'integral_maps'
+    db_dict = _collections.OrderedDict([
+        ('idn', {'field': 'id', 'dtype': int, 'not_null': True}),
+        ('name', {'field': 'name', 'dtype': str, 'not_null': True}),
+        ('date', {'field': 'date', 'dtype': str, 'not_null': True}),
+        ('hour', {'field': 'hour', 'dtype': str, 'not_null': True}),
+        ('software_version',
+            {'field': 'software_version', 'dtype': str, 'not_null': False}),
+        ('comments',
+            {'field': 'comments', 'dtype': str, 'not_null': True}),
+        ('Ix',
+            {'field': 'Ix', 'dtype': int, 'not_null': True}),
+        ('Iy',
+            {'field': 'Iy', 'dtype': int, 'not_null': True}),
+        ('I1',
+            {'field': 'I1', 'dtype': int, 'not_null': True}),
+        ('I2',
+            {'field': 'I2', 'dtype': int, 'not_null': True}),
+        ('I1x_amb_id',
+            {'field': 'I1x_amb_id', 'dtype': int, 'not_null': True}),
+        ('I1y_amb_id',
+            {'field': 'I1y_amb_id', 'dtype': int, 'not_null': True}),
+        ('I2x_amb_id',
+            {'field': 'I2x_amb_id', 'dtype': int, 'not_null': True}),
+        ('I2y_amb_id',
+            {'field': 'I2y_amb_id', 'dtype': int, 'not_null': True}),
+        ('x_start_pos',
+            {'field': 'x_start_pos', 'dtype': float, 'not_null': True}),
+        ('x_end_pos',
+            {'field': 'x_end_pos', 'dtype': float, 'not_null': True}),
+        ('x_step',
+            {'field': 'x_step', 'dtype': float, 'not_null': True}),
+        ('x_duration',
+            {'field': 'x_duration', 'dtype': float, 'not_null': True}),
+        ('y_start_pos',
+            {'field': 'y_start_pos', 'dtype': float, 'not_null': True}),
+        ('y_end_pos',
+            {'field': 'y_end_pos', 'dtype': float, 'not_null': True}),
+        ('y_step',
+            {'field': 'y_step', 'dtype': float, 'not_null': True}),
+        ('y_duration',
+            {'field': 'y_duration', 'dtype': float, 'not_null': True}),
+        ('repetitions',
+            {'field': 'repetitions', 'dtype': int, 'not_null': True}),
+        ('I1_start_id',
+            {'field': 'I1_start_id', 'dtype': int, 'not_null': True}),
+        ('I1_end_id',
+            {'field': 'I1_end_id', 'dtype': int, 'not_null': True}),
+        ('I2_start_id',
+            {'field': 'I2_start_id', 'dtype': int, 'not_null': True}),
+        ('I2_end_id',
+            {'field': 'I2_end_id', 'dtype': int, 'not_null': True}),
+        ('x_pos_array',
+            {'field': 'x_pos_array', 'dtype': _np.ndarray, 'not_null': True}),
+        ('y_pos_array',
+            {'field': 'y_pos_array', 'dtype': _np.ndarray, 'not_null': True}),
+        ('I1x',
+            {'field': 'I1x', 'dtype': _np.ndarray, 'not_null': True}),
+        ('I1x_std',
+            {'field': 'I1x_std', 'dtype': _np.ndarray, 'not_null': True}),
+        ('I1y',
+            {'field': 'I1y', 'dtype': _np.ndarray, 'not_null': True}),
+        ('I1y_std',
+            {'field': 'I1y_std', 'dtype': _np.ndarray, 'not_null': True}),
+        ('I2x',
+            {'field': 'I2x', 'dtype': _np.ndarray, 'not_null': True}),
+        ('I2x_std',
+            {'field': 'I2x_std', 'dtype': _np.ndarray, 'not_null': True}),
+        ('I2y',
+            {'field': 'I2y', 'dtype': _np.ndarray, 'not_null': True}),
+        ('I2y_std',
+            {'field': 'I2y_std', 'dtype': _np.ndarray, 'not_null': True}),
     ])
 
     def __init__(

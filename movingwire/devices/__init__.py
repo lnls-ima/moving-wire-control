@@ -111,16 +111,23 @@ class Multimeter(_Agilent3458ALib.Agilent3458AGPIB):
             self.send_command(self.commands.mformat_dreal)
 
     def start_measurement(self):
-        volt.configure_reading_format('DREAL')
-        volt.send_command('TRIG SGL')
+        try:
+            volt.configure_reading_format('DREAL')
+            volt.send_command('TRIG SGL')
+        except Exception:
+            raise
 
     def get_data_count(self):
         try:
             volt.send_command(volt.commands.mcount)
-            _sleep(0.2)
-            return int(volt.read_from_device().strip('\r\n'))
+            # _sleep(0.2)
+            ans = volt.read_from_device()
+            return int(ans.strip('\r\n'))
+        except ValueError:
+            return -1
         except Exception:
             _traceback.print_exc(file=_sys.stdout)
+            # raise
 
     def error_query(self):
         volt.send_command('ERR?')

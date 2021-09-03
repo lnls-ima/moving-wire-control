@@ -6,6 +6,7 @@ import sys as _sys
 import numpy as _np
 import pandas as _pd
 import time as _time
+import sqlite3 as _sqlite3
 import os.path as _path
 import traceback as _traceback
 # import pyqtgraph as _pyqtgraph
@@ -153,6 +154,7 @@ def update_db_name_list(db, cmb):
             cmb.setCurrentText(current_text)
     except Exception:
         _traceback.print_exc(file=_sys.stdout)
+
 
 def load_db_from_name(db, name):
     try:
@@ -315,3 +317,31 @@ def table_to_data_frame(table):
     df = _pd.DataFrame(_np.array(tdata), index=idx_labels, columns=col_labels)
 
     return df
+
+
+def pandas_load_db_measurements():
+    """Loads Database measurements using pandas.
+
+    Returns:
+        meas_I1 (pd.DataFrame): DataFrame containing sw I1 measurements;
+        meas_I2 (pd.DataFrame): DataFrame containing sw I2 measurements.
+    """
+
+    con = _sqlite3.connect('moving_wire_measurements.db')
+    meas_I1 = _pd.read_sql('SELECT * from measurements_sw_I1', con)
+    meas_I2 = _pd.read_sql('SELECT * from measurements_sw_I2', con)
+    con.close()
+    return meas_I1, meas_I2
+
+
+def pandas_load_db_maps():
+    """Loads Database measurements using pandas.
+
+    Returns:
+        maps (pd.DataFrame): DataFrame containing field integral maps data.
+    """
+
+    con = _sqlite3.connect('moving_wire_measurements.db')
+    maps = _pd.read_sql('SELECT * from integral_maps', con)
+    con.close()
+    return maps

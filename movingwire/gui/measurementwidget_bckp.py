@@ -18,8 +18,6 @@ import qtpy.uic as _uic
 import movingwire.data as _data
 from movingwire.gui.measurementdialog import MeasurementDialog \
     as _MeasurementDialog
-from movingwire.gui.mapdialog import MapDialog \
-    as _MapDialog
 from movingwire.gui.utils import (
     get_ui_file as _get_ui_file,
     sleep as _sleep,
@@ -32,7 +30,6 @@ from movingwire.devices import (
     ps as _ps,
     volt as _volt,
     )
-from scipy.sparse.linalg._expm_multiply import _trace
 # from pywin.framework import startup
 # from numpy.distutils.system_info import accelerate_info
 
@@ -106,18 +103,14 @@ class MeasurementWidget(_QWidget):
         self.ui.rdb_sw_I2.clicked.connect(self.change_mode)
         self.ui.rdb_fc.clicked.connect(self.change_mode)
         self.ui.pbt_stop_motors.clicked.connect(self.stop_motors)
-        self.ui.pbt_map.clicked.connect(self.map_dialog)
 
     def save_log(self, array, name='', comments=''):
         """Saves log on file."""
-        name = (name +
-                _time.strftime('_%y_%m_%d_%H_%M', _time.localtime()) + '.dat')
-        head = ('Turn1[V.s]\tTurn2[V.s]\tTurn3[V.s]\tTurn4[V.s]\t' +
-                'Turn5[V.s]\tTurn6[V.s]\tTurn7[V.s]\tTurn8[V.s]\t' +
-                'Turn9[V.s]\tTurn10[V.s]')
+        name = name + _time.strftime('_%y_%m_%d_%H_%M', _time.localtime()) + '.dat'
+        head = ('Turn1[V.s]\tTurn2[V.s]\tTurn3[V.s]\tTurn4[V.s]\tTurn5[V.s]\t' + 
+                'Turn6[V.s]\tTurn7[V.s]\tTurn8[V.s]\tTurn9[V.s]\tTurn10[V.s]')
         comments = comments + '\n'
-        _np.savetxt(name, array, delimiter='\t',
-                    comments=comments, header=head)
+        _np.savetxt(name, array, delimiter='\t', comments=comments, header=head)
 
     def test_steps(self):
         """Tests steps from ui values and prints initial and final positions.
@@ -356,7 +349,7 @@ class MeasurementWidget(_QWidget):
 
         try:
             _meas.db_update_database(self.database_name, mongo=self.mongo,
-                                     server=self.server)
+                                         server=self.server)
             last_id = _meas.db_get_last_id()
             name = '_'.join(
                 _meas.db_get_value('name', last_id).split('_')[:-2])
@@ -649,12 +642,9 @@ class MeasurementWidget(_QWidget):
             nmeasurements = _meas.nmeasurements
             nplc = _meas.nplc
             duration = _meas.duration
-            # start = _meas.start_pos
-            # end = _meas.end_pos
-            # step = _meas.step
-            start = self.cfg.start_pos
-            end = self.cfg.end_pos
-            step = self.cfg.step
+            start = _meas.start_pos
+            end = _meas.end_pos
+            step = _meas.step
             acq_init_interval = _meas.acq_init_interval
             npoints = int(_np.ceil(duration/(nplc/60)))
 
@@ -686,15 +676,16 @@ class MeasurementWidget(_QWidget):
                 jerk = ppmac_cfg.jerk_x  # [mm/s^3]
                 _meas.y_pos = self.motors.ui.dsb_pos_y.value()
                 _ppmac.enable_motors([1, 3])
+                # _ppmac.write('#2,4,5,6k')
+                # _ppmac.write('#1,3j/')
                 move_axis = self.motors.move_x
-                # sf = self.motors.cfg.x_sf
-                motion_step = self.motors.cfg.x_step
+                sf = self.motors.cfg.x_sf
                 if 'a' in motion_axis:
                     moving_motor = 1  # '1'
-                    # static_motor = 3  # '3'
+                    static_motor = 3  # '3'
                 elif 'b' in motion_axis:
                     moving_motor = 3  # '3'
-                    # static_motor = 1  # '1'
+                    static_motor = 1  # '1'
 
             elif 'Y' in motion_axis:
                 speed = ppmac_cfg.speed_y  # [mm/s]
@@ -702,15 +693,16 @@ class MeasurementWidget(_QWidget):
                 jerk = ppmac_cfg.jerk_y  # [mm/s^3]
                 _meas.x_pos = self.motors.ui.dsb_pos_x.value()
                 _ppmac.enable_motors([2, 4])
+                # _ppmac.write('#1,3,5,6k')
+                # _ppmac.write('#2,4j/')
                 move_axis = self.motors.move_y
-                motion_step = self.motors.cfg.y_step
-                # sf = self.motors.cfg.y_sf/self.motors.cfg.y_stps_per_cnt  # [mm/steps]
+                sf = self.motors.cfg.y_sf/self.motors.cfg.y_stps_per_cnt  # [mm/steps]
                 if 'a' in motion_axis:
                     moving_motor = 2  # '2'
-                    # static_motor = 4  # '4'
+                    static_motor = 4  # '4'
                 elif 'b' in motion_axis:
                     moving_motor = 4  # '4'
-                    # static_motor = 2  # '2'
+                    static_motor = 2  # '2'
 
             self.motors.configure_ppmac()
 
@@ -738,12 +730,8 @@ class MeasurementWidget(_QWidget):
                 _meas.name = '_'.join(name) + _time.strftime('_%y%m%d_%H%M')
                 _meas.date = _time.strftime('%Y-%m-%d')
                 _meas.hour = _time.strftime('%H:%M:%S')
-                _init_pos = position - motion_step/2  # [mm]
-                _end_pos = position + motion_step/2  # [mm]
-                _meas.start_pos = _init_pos
-                _meas.end_pos = _end_pos
-                _meas.step = motion_step
-
+                _init_pos = position - step/2  # [mm]
+                _end_pos = position + step/2  # [mm]
                 if 'X' in motion_axis:
                     _meas.x_pos = position
                 else:
@@ -764,7 +752,7 @@ class MeasurementWidget(_QWidget):
                 # _volt.read_from_device()
                 for i in range(_meas.nmeasurements):
                     for j in range(4):
-                        # error = 0
+                        error = 0
                         if j == 3:
                             _prg_dialog.destroy()
                             _ppmac.flag_abort = True
@@ -781,12 +769,12 @@ class MeasurementWidget(_QWidget):
                             raise RuntimeError('Measurement aborted.')
 
                         # Forward measurement
-                        # error = 1
+                        error = 1
                         _volt.start_measurement()
     #                     _ppmac.write('Gather.PhaseEnable=2')
                         _t0 = _time.time()
                         _sleep(acq_init_interval)
-                        # error = 2
+                        error = 2
                         # move step
                         if not I2:
                             if not move_axis(_end_pos):
@@ -812,11 +800,10 @@ class MeasurementWidget(_QWidget):
                         if _time.time() - _t0 <= duration:
                             _sleep(0.2)
 
-                        # error = 3
+                        error = 3
                         _sleep(self.volt_interval)
                         _t = _time.time() - _t0
-                        _data_frw = _volt.get_readings_from_memory(5)[::-1]
-                        # self.get_volt_data(npoints)
+                        _data_frw = _volt.get_readings_from_memory(5)[::-1] #self.get_volt_data(npoints)
                         # print(_t)
 
                         if _prg_dialog.wasCanceled():
@@ -860,8 +847,7 @@ class MeasurementWidget(_QWidget):
 
                         _sleep(self.volt_interval)
                         _t = _time.time() - _t0
-                        _data_bck = _volt.get_readings_from_memory(5)[::-1]
-                        # self.get_volt_data(npoints)
+                        _data_bck = _volt.get_readings_from_memory(5)[::-1] #self.get_volt_data(npoints)
                         # print(_t)
 
                         break
@@ -961,10 +947,10 @@ class MeasurementWidget(_QWidget):
             False otherwise.
         """
         try:
-             # _ppmac.flag_abort = False
-             # self.update_cfg_from_ui()
-             #
-             # self.meas.comments = self.dialog.ui.te_comments.toPlainText()
+#             _ppmac.flag_abort = False
+#             self.update_cfg_from_ui()
+
+#             self.meas.comments = self.dialog.ui.te_comments.toPlainText()
             if self.dialog.ui.chb_Iamb.isChecked():
                 self.meas.Iamb_id = 0
             else:
@@ -1037,8 +1023,7 @@ class MeasurementWidget(_QWidget):
                 _fdi.send('INP:COUP DC')
             else:
                 counts = int(_np.ceil(3/(self.cfg.nplc/60)))
-                _volt.configure_volt(nplc=self.cfg.nplc,
-                                     time=self.cfg.duration)
+                _volt.configure_volt(nplc=self.cfg.nplc, time=self.cfg.duration)
             _sleep(0.5)
 #             _ppmac.remove_backlash(start_pos)
 #             _sleep(10)
@@ -1182,475 +1167,3 @@ class MeasurementWidget(_QWidget):
             self.motors.ppmac.stop_motors()
         except Exception:
             _traceback.print_exc(file=_sys.stdout)
-
-    def map_dialog(self):
-        """Creates field map integrals dialog."""
-        self.m_dialog = _MapDialog()
-        self.m_dialog.show()
-        self.m_dialog.accepted.connect(self.integral_map)
-        self.m_dialog.rejected.connect(self.cancel_map)
-
-    def cancel_map(self):
-        """Cancels integral map and destroys dialog."""
-        self.m_dialog.destroy()
-
-    def update_map_meas_variables(self, map_data, map_cfg):
-        """Updates integrals map variables.
-
-        Args:
-            map_data (IntegralMaps): IntegralMaps data object;
-            map_cfg (IntegralMapsCfg): IntegralMapsCfg data object.
-
-        Returns:
-            True if successfull, False otherwise."""
-        try:
-            name = map_cfg.name.split('_')[:-2]
-            map_data.name = '_'.join(name) + _time.strftime('_%y%m%d_%H%M')
-            map_data.date = _time.strftime('%Y-%m-%d')
-            map_data.hour = _time.strftime('%H:%M:%S')
-            map_data.comments = map_cfg.comments
-            map_data.Ix = map_cfg.Ix
-            map_data.Iy = map_cfg.Iy
-            map_data.I1 = map_cfg.I1
-            map_data.I2 = map_cfg.I2
-            map_data.I1x_amb_id = map_cfg.I1x_amb_id
-            map_data.I1y_amb_id = map_cfg.I1y_amb_id
-            map_data.I2x_amb_id = map_cfg.I1x_amb_id
-            map_data.I2y_amb_id = map_cfg.I2y_amb_id
-            map_data.x_start_pos = map_cfg.x_start_pos
-            map_data.x_end_pos = map_cfg.x_end_pos
-            map_data.x_step = map_cfg.x_step
-            map_data.x_duration = map_cfg.x_duration
-            map_data.y_start_pos = map_cfg.y_start_pos
-            map_data.y_end_pos = map_cfg.y_end_pos
-            map_data.y_step = map_cfg.y_step
-            map_data.y_duration = map_cfg.y_duration
-            map_data.repetitions = map_cfg.repetitions
-        except Exception:
-            _traceback.print_exc(file=_sys.stdout)
-
-    def integral_map(self):
-        """Field integrals map measurement routine."""
-        try:
-            self.m_dialog.update_cfg_from_ui()
-            _cfg = self.m_dialog.cfg
-            ppmac_cfg = self.motors.cfg
-            _map_data = _data.measurement.IntegralMaps()
-            self.update_map_meas_variables(_map_data, _cfg)
-
-            nplc = self.ui.dsb_nplc.value()
-            mrange = self.ui.cmb_range.currentIndex()
-
-            if _cfg.I1:
-                self.meas_sw.db_update_database(self.database_name,
-                                                mongo=self.mongo,
-                                                server=self.server)
-                _map_data.I1_start_id = self.meas_sw.db_get_last_id() + 1
-                if _cfg.Ix:
-                    _meas_I1x = _data.measurement.MeasurementDataSW()
-                    _meas_I1x.db_update_database(self.database_name,
-                                                 mongo=self.mongo,
-                                                 server=self.server)
-                    _map_data.I1_start_id = _meas_I1x.db_get_last_id() + 1
-
-                    name = _cfg.name.split('_')[:-2]
-                    name = '_'.join(name) + '_I1x'
-                    _meas_I1x.name = name + _time.strftime('_%y%m%d_%H%M')
-                    _meas_I1x.mode = 'SW_I1'
-                    _meas_I1x.comments = _cfg.comments
-                    _meas_I1x.step = self.motors.cfg.y_step
-                    _meas_I1x.motion_axis = 'Y'
-                    _meas_I1x.gain = self.ui.dsb_gain.value()
-                    _meas_I1x.turns = self.ui.sb_turns.value()
-                    _meas_I1x.length = self.ui.dsb_length.value()
-                    _meas_I1x.nplc = nplc
-                    _meas_I1x.duration = _cfg.y_duration
-                    _meas_I1x.nmeasurements = self.ui.sb_nmeasurements.value()
-                    _meas_I1x.speed = ppmac_cfg.speed_y  # [mm/s]
-                    _meas_I1x.accel = ppmac_cfg.accel_y  # [mm/s^2]
-                    _meas_I1x.jerk = ppmac_cfg.jerk_y  # [mm/s^3]
-                    _meas_I1x.Iamb_id = _cfg.I1x_amb_id
-                    _meas_I1x.range = mrange
-                    _meas_I1x.acq_init_interval = (
-                        self.ui.dsb_acq_init_interval.value())
-                    _meas_I1x.acq_final_interval = (
-                        self.ui.dsb_acq_final_interval.value())
-
-                if _cfg.Iy:
-                    _meas_I1y = _data.measurement.MeasurementDataSW()
-                    _meas_I1y.db_update_database(self.database_name,
-                                                 mongo=self.mongo,
-                                                 server=self.server)
-                    _map_data.I1_start_id = _meas_I1y.db_get_last_id() + 1
-
-                    name = _cfg.name.split('_')[:-2]
-                    name = '_'.join(name) + '_I1y'
-                    _meas_I1y.name = name + _time.strftime('_%y%m%d_%H%M')
-                    _meas_I1y.mode = 'SW_I1'
-                    _meas_I1y.comments = _cfg.comments
-                    _meas_I1y.step = self.motors.cfg.x_step
-                    _meas_I1y.motion_axis = 'X'
-                    _meas_I1y.gain = self.ui.dsb_gain.value()
-                    _meas_I1y.turns = self.ui.sb_turns.value()
-                    _meas_I1y.length = self.ui.dsb_length.value()
-                    _meas_I1y.nplc = nplc
-                    _meas_I1y.duration = _cfg.x_duration
-                    _meas_I1y.nmeasurements = self.ui.sb_nmeasurements.value()
-                    _meas_I1y.speed = ppmac_cfg.speed_x  # [mm/s]
-                    _meas_I1y.accel = ppmac_cfg.accel_x  # [mm/s^2]
-                    _meas_I1y.jerk = ppmac_cfg.jerk_x  # [mm/s^3]
-                    _meas_I1y.Iamb_id = _cfg.I1y_amb_id
-                    _meas_I1y.range = mrange
-                    _meas_I1y.acq_init_interval = (
-                        self.ui.dsb_acq_init_interval.value())
-                    _meas_I1y.acq_final_interval = (
-                        self.ui.dsb_acq_final_interval.value())
-
-            if _cfg.I2:
-                self.meas_sw2.db_update_database(self.database_name,
-                                                 mongo=self.mongo,
-                                                 server=self.server)
-                _map_data.I2_start_id = self.meas_sw2.db_get_last_id() + 1
-                if _cfg.Ix:
-                    _meas_I2x = _data.measurement.MeasurementDataSW2()
-
-                    name = _cfg.name.split('_')[:-2]
-                    name = '_'.join(name) + '_I2x'
-                    _meas_I2x.name = name + _time.strftime('_%y%m%d_%H%M')
-                    _meas_I2x.mode = 'SW_I2'
-                    _meas_I2x.comments = _cfg.comments
-                    _meas_I2x.step = self.motors.cfg.y_step
-                    _meas_I2x.motion_axis = 'Y'
-                    _meas_I2x.gain = self.ui.dsb_gain.value()
-                    _meas_I2x.turns = self.ui.sb_turns.value()
-                    _meas_I2x.length = self.ui.dsb_length.value()
-                    _meas_I2x.nplc = nplc
-                    _meas_I2x.duration = _cfg.y_duration
-                    _meas_I2x.nmeasurements = self.ui.sb_nmeasurements.value()
-                    _meas_I2x.speed = ppmac_cfg.speed_y  # [mm/s]
-                    _meas_I2x.accel = ppmac_cfg.accel_y  # [mm/s^2]
-                    _meas_I2x.jerk = ppmac_cfg.jerk_y  # [mm/s^3]
-                    _meas_I2x.Iamb_id = _cfg.I2x_amb_id
-                    _meas_I2x.range = mrange
-                    _meas_I2x.acq_init_interval = (
-                        self.ui.dsb_acq_init_interval.value())
-                    _meas_I2x.acq_final_interval = (
-                        self.ui.dsb_acq_final_interval.value())
-
-                if _cfg.Iy:
-                    _meas_I2y = _data.measurement.MeasurementDataSW2()
-
-                    name = _cfg.name.split('_')[:-2]
-                    name = '_'.join(name) + '_I2y'
-                    _meas_I2y.name = name + _time.strftime('_%y%m%d_%H%M')
-                    _meas_I2y.mode = 'SW_I2'
-                    _meas_I2y.comments = _cfg.comments
-                    _meas_I2y.step = self.motors.cfg.x_step
-                    _meas_I2y.motion_axis = 'X'
-                    _meas_I2y.gain = self.ui.dsb_gain.value()
-                    _meas_I2y.turns = self.ui.sb_turns.value()
-                    _meas_I2y.length = self.ui.dsb_length.value()
-                    _meas_I2y.nplc = nplc
-                    _meas_I2y.duration = _cfg.x_duration
-                    _meas_I2y.nmeasurements = self.ui.sb_nmeasurements.value()
-                    _meas_I2y.speed = ppmac_cfg.speed_x  # [mm/s]
-                    _meas_I2y.accel = ppmac_cfg.accel_x  # [mm/s^2]
-                    _meas_I2y.jerk = ppmac_cfg.jerk_x  # [mm/s^3]
-                    _meas_I2y.Iamb_id = _cfg.I2y_amb_id
-                    _meas_I2y.range = mrange
-                    _meas_I2y.acq_init_interval = (
-                        self.ui.dsb_acq_init_interval.value())
-                    _meas_I2y.acq_final_interval = (
-                        self.ui.dsb_acq_final_interval.value())
-
-            # define x position array:
-            x_motion_step = self.motors.cfg.x_step
-            if _cfg.x_end_pos < _cfg.x_start_pos:
-                _QMessageBox.information(self, 'Warning',
-                                         'X End position should be greater '
-                                         'than start position.\n'
-                                         'Measurement Aborted.',
-                                         _QMessageBox.Ok)
-                return False
-            elif _cfg.x_start_pos == _cfg.x_end_pos:
-                n_steps = 1
-                x_pos_array = _np.array([_cfg.x_start_pos])
-            else:
-                if (_cfg.x_end_pos - _cfg.x_start_pos) < _cfg.x_step:
-                    x_pos_array = _np.array([_cfg.x_start_pos, _cfg.x_end_pos])
-                else:
-                    # number of steps
-                    n_steps = int(1 + _np.ceil(
-                        (_cfg.x_end_pos - _cfg.x_start_pos) / _cfg.x_step))
-                    # warning if n_steps is not an integer?
-                    # check if start and end pos are inside limits
-                    x_pos_array = _np.linspace(_cfg.x_start_pos,
-                                               _cfg.x_end_pos, n_steps)
-
-            # define y position array:
-            y_motion_step = self.motors.cfg.y_step
-            if _cfg.y_end_pos < _cfg.y_start_pos:
-                _QMessageBox.information(self, 'Warning',
-                                         'Y End position should be greater '
-                                         'than start position.\n'
-                                         'Measurement Aborted.',
-                                         _QMessageBox.Ok)
-                return False
-            elif _cfg.y_start_pos == _cfg.y_end_pos:
-                n_steps = 1
-                y_pos_array = _np.array([_cfg.y_start_pos])
-            else:
-                if (_cfg.y_end_pos - _cfg.y_start_pos) < _cfg.y_step:
-                    y_pos_array = _np.array([_cfg.y_start_pos, _cfg.y_end_pos])
-                else:
-                    # number of steps
-                    n_steps = int(1 + _np.ceil(
-                        (_cfg.y_end_pos - _cfg.y_start_pos) / _cfg.y_step))
-                    # warning if n_steps is not an integer?
-                    # check if start and end pos are inside limits
-                    y_pos_array = _np.linspace(_cfg.y_start_pos,
-                                               _cfg.y_end_pos, n_steps)
-
-            for y in y_pos_array:
-                for x in x_pos_array:
-                    if _cfg.Ix:
-                        self.motors.move_x(x)
-                        y_init_pos = y - y_motion_step/2
-                        y_final_pos = y + y_motion_step/2
-                        move_axis = self.motors.move_y
-                        _volt.configure_volt(nplc, _cfg.y_duration, mrange)
-                        if _cfg.I1:
-                            _meas_I1x.x_pos = x
-                            _meas_I1x.y_pos = y
-                            _meas_I1x.start_pos = y_init_pos
-                            _meas_I1x.end_pos = y_final_pos
-                            _meas_I1x.move_axis = move_axis
-                            for _ in range(_cfg.repetitions):
-                                self.map_measurement(_meas_I1x)
-                        if _cfg.I2:
-                            _meas_I2x.x_pos = x
-                            _meas_I2x.y_pos = y
-                            _meas_I2x.start_pos = y_init_pos
-                            _meas_I2x.end_pos = y_final_pos
-                            _meas_I2x.move_axis = move_axis
-                            _meas_I2x.moving_motor = 2  # CHECK WHICH ONE IS THE BEST
-                            move_axis(y)
-                            move_axis(y)
-                            for _ in range(_cfg.repetitions):
-                                self.map_measurement(_meas_I2x, I2=True)
-
-                    if _cfg.Iy:
-                        self.motors.move_y(y)
-                        x_init_pos = x - x_motion_step/2
-                        x_final_pos = x + x_motion_step/2
-                        move_axis = self.motors.move_x
-                        _volt.configure_volt(nplc, _cfg.x_duration, mrange)
-                        if _cfg.I1:
-                            _meas_I1y.x_pos = x
-                            _meas_I1y.y_pos = y
-                            _meas_I1y.start_pos = x_init_pos
-                            _meas_I1y.end_pos = x_final_pos
-                            _meas_I1y.move_axis = move_axis
-                            for _ in range(_cfg.repetitions):
-                                self.map_measurement(_meas_I1y)
-                        if _cfg.I2:
-                            _meas_I2y.x_pos = x
-                            _meas_I2y.y_pos = y
-                            _meas_I2y.start_pos = x_init_pos
-                            _meas_I2y.end_pos = x_final_pos
-                            _meas_I2y.move_axis = move_axis
-                            _meas_I2y.moving_motor = 1  # CHECK WHICH ONE IS THE BEST
-                            move_axis(x)
-                            for _ in range(_cfg.repetitions):
-                                self.map_measurement(_meas_I2y, I2=True)
-
-            if _cfg.I1:
-                self.meas_sw.db_update_database(self.database_name,
-                                                mongo=self.mongo,
-                                                server=self.server)
-                _map_data.I1_end_id = self.meas_sw.db_get_last_id()
-            else:
-                _map_data.I1_start_id = 0
-                _map_data.I1_end_id = 0
-
-            if _cfg.I2:
-                self.meas_sw2.db_update_database(self.database_name,
-                                                 mongo=self.mongo,
-                                                 server=self.server)
-                _map_data.I2_end_id = self.meas_sw2.db_get_last_id()
-            else:
-                _map_data.I2_start_id = 0
-                _map_data.I2_end_id = 0
-
-            self.analysis.update_map_arrays(_map_data)
-
-            _map_data.db_update_database(
-                        self.database_name,
-                        mongo=self.mongo, server=self.server)
-            _map_data.db_save()
-
-            _QMessageBox.information(self, 'Information',
-                                     'Field integral map finished '
-                                     'successfully.',
-                                     _QMessageBox.Ok)
-        except Exception:
-            _traceback.print_exc(file=_sys.stdout)
-
-    def map_measurement(self, meas, I2=False):
-        """Measure field integral in stretched wire mode.
-
-        Args:
-            meas (MeasurementDataSw/2): sw 1/2 measurement data object;
-            I2 (bool): True for I2 measurement; False for I1 measurement.
-        """
-
-        _meas = meas
-        name = _meas.name.split('_')[:-2]
-
-        _meas.name = '_'.join(name) + _time.strftime('_%y%m%d_%H%M')
-        _meas.date = _time.strftime('%Y-%m-%d')
-        _meas.hour = _time.strftime('%H:%M:%S')
-        _init_pos = _meas.start_pos  # [mm]
-        _end_pos = _meas.end_pos  # [mm]
-        nplc = _meas.nplc
-        duration = _meas.duration
-        acq_init_interval = _meas.acq_init_interval
-        nmeasurements = _meas.nmeasurements
-        npoints = int(_np.ceil(duration/(nplc/60)))
-
-        move_axis = _meas.move_axis
-
-        data_frw_aux = _np.array([])
-        data_bck_aux = _np.array([])
-
-        _prg_dialog = _QProgressDialog('Measurement', 'Abort', 0,
-                                       nmeasurements, self)
-        _prg_dialog.setWindowTitle('Measurement Progress')
-        _prg_dialog.show()
-        _QApplication.processEvents()
-
-        # go to init pos
-        if not I2:
-            move_axis(_init_pos)
-            # _sleep(0.5)
-            move_axis(_init_pos)
-        else:
-            moving_motor = _meas.moving_motor
-            move_axis(_init_pos, motor=moving_motor)
-            move_axis(_init_pos, motor=moving_motor)
-
-        # _volt.read_from_device()
-        for i in range(nmeasurements):
-            for j in range(4):
-                if j == 3:
-                    _prg_dialog.destroy()
-                    _ppmac.flag_abort = True
-                    _QMessageBox.warning(self, 'Warning',
-                                         'Measurement aborted after 3 '
-                                         'consecutive moving errors.',
-                                         _QMessageBox.Ok)
-                    raise RuntimeError('Measurement aborted after 3 '
-                                       'consecutive moving errors.')
-
-                if _prg_dialog.wasCanceled():
-                    _prg_dialog.destroy()
-                    _ppmac.flag_abort = True
-                    raise RuntimeError('Measurement aborted.')
-
-                # Forward measurement
-                _volt.start_measurement()
-#                     _ppmac.write('Gather.PhaseEnable=2')
-                _t0 = _time.time()
-                _sleep(acq_init_interval)
-                # move step
-                if not I2:
-                    if not move_axis(_end_pos):
-                        move_axis(_init_pos)
-                        _sleep(1)
-                        move_axis(_init_pos)
-                        _sleep(duration + 9)
-                        _volt.get_readings_from_memory(5)
-                        continue
-                else:
-                    if not move_axis(_end_pos, motor=moving_motor):
-                        move_axis(_init_pos, motor=moving_motor)
-                        _sleep(1)
-                        move_axis(_init_pos, motor=moving_motor)
-                        _sleep(duration + 9)
-                        _volt.get_readings_from_memory(5)
-                        continue
-
-                if _time.time() - _t0 <= duration:
-                    _sleep(0.2)
-
-                _sleep(self.volt_interval)
-                _t = _time.time() - _t0
-                _data_frw = _volt.get_readings_from_memory(5)[::-1]
-                # print(_t)
-
-                if _prg_dialog.wasCanceled():
-                    _prg_dialog.destroy()
-                    _ppmac.flag_abort = True
-                    raise RuntimeError('Measurement aborted.')
-
-                # comment to minimize  temperature difference
-                # _sleep(3)
-
-                # Backward measurement
-                _volt.start_measurement()
-#                     _ppmac.write('Gather.PhaseEnable=2')
-                _t0 = _time.time()
-                _sleep(acq_init_interval)
-                # move - step
-                if not I2:
-                    if not move_axis(_init_pos):
-                        move_axis(_init_pos)
-                        _sleep(1)
-                        move_axis(_init_pos)
-                        _sleep(duration + 9)
-                        _volt.get_readings_from_memory(5)
-                        self.get_volt_data(npoints)
-                        continue
-                else:
-                    if not move_axis(_init_pos, motor=moving_motor):
-                        move_axis(_init_pos, motor=moving_motor)
-                        _sleep(1)
-                        move_axis(_init_pos, motor=moving_motor)
-                        _sleep(duration + 9)
-                        _volt.get_readings_from_memory(5)
-                        continue
-
-                if _time.time() - _t0 <= duration:
-                    _sleep(0.2)
-
-                _sleep(self.volt_interval)
-                _t = _time.time() - _t0
-                _data_bck = _volt.get_readings_from_memory(5)[::-1]
-                # print(_t)
-
-                break
-
-            if i == 0:
-                data_bck_aux = _np.append(data_bck_aux, _data_bck)
-                data_frw_aux = _np.append(data_frw_aux, _data_frw)
-            else:
-                data_bck_aux = _np.vstack([data_bck_aux, _data_bck])
-                data_frw_aux = _np.vstack([data_frw_aux, _data_frw])
-            _prg_dialog.setValue(i+1)
-
-        # data[i, j]
-        # i: measurement voltage array index
-        # j: measurement number index
-        _meas.data_frw = data_frw_aux.transpose()
-        _meas.data_bck = data_bck_aux.transpose()
-
-        # data analisys
-        self.analysis.integral_calculus_sw(_meas, I2)
-        # self.save_measurement()
-        _meas.db_update_database(
-                        self.database_name,
-                        mongo=self.mongo, server=self.server)
-        _meas.db_save()
-        self.analysis.update_meas_list()
-        _count = self.analysis.cmb_meas_name.count() - 1
-        self.analysis.cmb_meas_name.setCurrentIndex(_count)

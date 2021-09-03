@@ -87,6 +87,7 @@ class PpmacWidget(_QWidget):
     def connect_signal_slots(self):
         """Create signal/slot connections."""
         self.ui.timer.timeout.connect(self.update_position)
+        # self.ui.cmb_cfg_name.currentIndexChanged.connect(self.load_cfg)
         self.ui.pbt_move.clicked.connect(self.move)
         self.ui.pbt_move_xy.clicked.connect(self.move_xy)
         self.ui.pbt_home.clicked.connect(self.home)
@@ -107,10 +108,14 @@ class PpmacWidget(_QWidget):
                 if all([not _ppmac.ppmac.closed,
                         self.parent().currentWidget() == self]):
                     self.pos = _ppmac.read_motor_pos([1, 2, 3, 4, 7, 8])
-                    self.ui.lcd_pos1.display(self.pos[0]*self.cfg.x_sf)
-                    self.ui.lcd_pos2.display(self.pos[4]*self.cfg.y_sf)
-                    self.ui.lcd_pos3.display(self.pos[2]*self.cfg.x_sf)
-                    self.ui.lcd_pos4.display(self.pos[5]*self.cfg.y_sf)
+                    self.ui.lcd_pos1.display(
+                        self.pos[0]*self.cfg.x_sf - self.cfg.x_offset)
+                    self.ui.lcd_pos2.display(
+                        self.pos[4]*self.cfg.y_sf - self.cfg.y_offset)
+                    self.ui.lcd_pos3.display(
+                        self.pos[2]*self.cfg.x_sf - self.cfg.x_offset)
+                    self.ui.lcd_pos4.display(
+                        self.pos[5]*self.cfg.y_sf - self.cfg.y_offset)
                     # self.ui.lcd_pos5.display(self.pos[4]*self.angular_sf)
                     # self.ui.lcd_pos6.display(self.pos[5]*self.angular_sf)
                     _QApplication.processEvents()
@@ -142,16 +147,19 @@ class PpmacWidget(_QWidget):
             self.cfg.home_offset6 = self.ui.sb_home_offset6.value()
 
             self.cfg.pos_x = self.ui.dsb_pos_x.value()
+            self.cfg.x_step = self.ui.dsb_x_step.value()
             self.cfg.speed_x = self.ui.dsb_speed_x.value()
             self.cfg.accel_x = self.ui.dsb_accel_x.value()
             self.cfg.jerk_x = self.ui.dsb_jerk_x.value()
             self.cfg.min_x = self.ui.dsb_min_x.value()
             self.cfg.max_x = self.ui.dsb_max_x.value()
             self.cfg.x_sf = self.ui.dsb_x_sf.value()
+            self.cfg.x_offset = self.ui.dsb_x_offset.value()
             self.cfg.home_offset1 = self.ui.sb_home_offset1.value()
             self.cfg.home_offset3 = self.ui.sb_home_offset3.value()
 
             self.cfg.pos_y = self.ui.dsb_pos_y.value()
+            self.cfg.y_step = self.ui.dsb_y_step.value()
             self.cfg.speed_y = self.ui.dsb_speed_y.value()
             self.cfg.accel_y = self.ui.dsb_accel_y.value()
             self.cfg.jerk_y = self.ui.dsb_jerk_y.value()
@@ -159,6 +167,7 @@ class PpmacWidget(_QWidget):
             self.cfg.max_y = self.ui.dsb_max_y.value()
             self.cfg.y_sf = self.ui.dsb_y_sf.value()
             self.cfg.y_stps_per_cnt = self.ui.dsb_y_stps_per_cnt.value()
+            self.cfg.y_offset = self.ui.dsb_y_offset.value()
             self.cfg.max_pos_error = self.ui.dsb_max_pos_error.value()
             self.cfg.home_offset2 = self.ui.sb_home_offset2.value()
             self.cfg.home_offset4 = self.ui.sb_home_offset4.value()
@@ -223,16 +232,19 @@ class PpmacWidget(_QWidget):
             self.ui.sb_home_offset6.setValue(self.cfg.home_offset6)
 
             self.ui.dsb_pos_x.setValue(self.cfg.pos_x)
+            self.ui.dsb_x_step.setValue(self.cfg.x_step)
             self.ui.dsb_speed_x.setValue(self.cfg.speed_x)
             self.ui.dsb_accel_x.setValue(self.cfg.accel_x)
             self.ui.dsb_jerk_x.setValue(self.cfg.jerk_x)
             self.ui.dsb_min_x.setValue(self.cfg.min_x)
             self.ui.dsb_max_x.setValue(self.cfg.max_x)
             self.ui.dsb_x_sf.setValue(self.cfg.x_sf)
+            self.ui.dsb_x_offset.setValue(self.cfg.x_offset)
             self.ui.sb_home_offset1.setValue(self.cfg.home_offset1)
             self.ui.sb_home_offset3.setValue(self.cfg.home_offset3)
 
             self.ui.dsb_pos_y.setValue(self.cfg.pos_y)
+            self.ui.dsb_y_step.setValue(self.cfg.y_step)
             self.ui.dsb_speed_y.setValue(self.cfg.speed_y)
             self.ui.dsb_accel_y.setValue(self.cfg.accel_y)
             self.ui.dsb_jerk_y.setValue(self.cfg.jerk_y)
@@ -240,6 +252,7 @@ class PpmacWidget(_QWidget):
             self.ui.dsb_max_y.setValue(self.cfg.max_y)
             self.ui.dsb_y_sf.setValue(self.cfg.y_sf)
             self.ui.dsb_y_stps_per_cnt.setValue(self.cfg.y_stps_per_cnt)
+            self.ui.dsb_y_offset.setValue(self.cfg.y_offset)
             self.ui.dsb_max_pos_error.setValue(self.cfg.max_pos_error)
             self.ui.sb_home_offset2.setValue(self.cfg.home_offset2)
             self.ui.sb_home_offset4.setValue(self.cfg.home_offset4)
@@ -519,7 +532,7 @@ class PpmacWidget(_QWidget):
         try:
             _x_lim = [self.ui.dsb_min_x.value(),
                       self.ui.dsb_max_x.value()]  # [mm]
-            _pos_x = position  # [mm] *10**-3/self.cfg.x_sf
+            _pos_x = position - self.cfg.x_offset  # [mm] *10**-3/self.cfg.x_sf
             _status = False
 
             if _x_lim[0] <= _pos_x <= _x_lim[1]:
@@ -539,6 +552,7 @@ class PpmacWidget(_QWidget):
             # _sleep(0.2)
 
             if not (motor in [1, 3]):
+                _ppmac.write('#2,4k')
                 _ppmac.write('#1,3j/')
                 _msg_x = '#1,3j' + _mode + str(_pos_x)
                 _ppmac.write(_msg_x)
@@ -555,6 +569,7 @@ class PpmacWidget(_QWidget):
                     _status = True
 
             else:
+                _ppmac.write('#2,4k')
                 _ppmac.write('#{0}j/'.format(motor))
                 _msg_x = '#{0}j'.format(motor) + _mode + str(_pos_x)
                 _ppmac.write(_msg_x)
@@ -595,7 +610,7 @@ class PpmacWidget(_QWidget):
         try:
             _y_lim = [self.ui.dsb_min_y.value(),
                       self.ui.dsb_max_y.value()]  # [mm]
-            _pos_y = position  # [mm]
+            _pos_y = position - self.cfg.x_offset  # [mm]
             _status = False
             _limit_error = False
 
@@ -628,6 +643,7 @@ class PpmacWidget(_QWidget):
             # _sleep(0.2)
 
             if not (motor in [2, 4]):
+                _ppmac.write('#1,3k')
                 _ppmac.write('#2,4j/')
                 _msg_y = '#2j{0}{1};#4j{0}{2}'.format(_mode, int(_y_steps[0]),
                                                       int(_y_steps[1]))
@@ -663,6 +679,7 @@ class PpmacWidget(_QWidget):
                     if isinstance(_target_y_pos, _np.ndarray):
                         _target_y_pos = _target_y_pos[1]
 
+                _ppmac.write('#1,3k')
                 _ppmac.write('#{0}j/'.format(motor))
                 _msg_y = '#{0}j{1}{2}'.format(motor, _mode, _y_steps)
                 _ppmac.write(_msg_y)
@@ -696,47 +713,21 @@ class PpmacWidget(_QWidget):
     def move_xy(self):
         """Move X and Y motors."""
         try:
-            _x_lim = [self.ui.dsb_min_x.value(),
-                      self.ui.dsb_max_x.value()]
-            _y_lim = [self.ui.dsb_min_y.value(),
-                      self.ui.dsb_max_y.value()]
-            _pos_x = self.ui.dsb_pos_x.value()  # *10**-3/self.cfg.x_sf
-            _pos_y = self.ui.dsb_pos_y.value()  # *10**-3/self.cfg.y_sf
-
-            if _x_lim[0] <= _pos_x <= _x_lim[1]:
-                _pos_x = _pos_x/self.cfg.x_sf
-            else:
-                _QMessageBox.warning(self, 'Information',
-                                     'X position out of range.',
-                                     _QMessageBox.Ok)
-                return False
-
-            if _y_lim[0] <= _pos_y <= _y_lim[1]:
-                _pos_y = _pos_y/self.cfg.y_sf
-            else:
-                _QMessageBox.warning(self, 'Information',
-                                     'Y position out of range.',
-                                     _QMessageBox.Ok)
-                return False
+            _pos_x = self.ui.dsb_pos_x.value()
+            _pos_y = self.ui.dsb_pos_y.value()
 
             if self.ui.rdb_abs_xy.isChecked():
-                _mode = '='
+                absolute = True
             else:
-                _mode = '^'
+                absolute = False
 
-#             with _ppmac.lock_ppmac:
-            self.timer.stop()
-            _ppmac.write('#1..4j/')
-            _msg_x = '#1,3j' + _mode + str(_pos_x)
-            _msg_y = '#2,4j' + _mode + str(_pos_y)
-            _ppmac.write(_msg_x + ';' + _msg_y)
-            _ppmac.read()
-            self.timer.start(1000)
+            self.move_x(_pos_x, absolute=absolute)
+            self.move_y(_pos_y, absolute=absolute)
 
             return True
         except Exception:
             _traceback.print_exc(file=_sys.stdout)
-            self.timer.start(1000)
+            # self.timer.start(1000)
             return False
 
     def move_x_ui(self):

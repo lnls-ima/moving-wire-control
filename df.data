@@ -1,0 +1,3 @@
+	X [mm]	Y [mm]	I1x [G.cm]	I1x_std [G.cm]	I1y [G.cm]	I1y_std [G.cm]	I2x [kG.cm^2]	I2x_std [kG.cm^2]	I2y [kG.cm^2]	I2y_std [kG.cm^2]
+0	0	0	1	2	1	2	3	4	3	4
+1	0	0	1	2	1	2	3	4	3	4

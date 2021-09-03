@@ -4,6 +4,7 @@ import os as _os
 import sys as _sys
 import numpy as _np
 import time as _time
+import pandas as _pd
 import traceback as _traceback
 
 from qtpy.QtWidgets import (
@@ -20,6 +21,8 @@ from movingwire.gui.utils import (
     get_ui_file as _get_ui_file,
     sleep as _sleep,
     update_db_name_list as _update_db_name_list,
+    pandas_load_db_measurements as _pandas_load_db_measurements,
+    pandas_load_db_maps as _pandas_load_db_maps
     )
 
 from movingwire.gui.viewcfgwidget import ViewCfgWidget as _ViewCfgWidget
@@ -27,6 +30,8 @@ from movingwire.gui.viewcfgwidget import ViewCfgWidget as _ViewCfgWidget
 import matplotlib
 from PyQt5.uic.Compiler.qtproxies import QtWidgets
 from builtins import isinstance
+from pickle import NONE
+from sympy.simplify.powsimp import _y
 matplotlib.use('Qt5Agg')
 
 from matplotlib.backends.backend_qt5agg import (
@@ -56,6 +61,7 @@ class AnalysisWidget(_QWidget):
         self.ui = _uic.loadUi(uifile, self)
 
         self.set_pyplot()
+        self.set_map_pyplot()
 
         self.cfg = _data.configuration.MeasurementConfig()
         self.meas_fc = _data.measurement.MeasurementDataFC()
@@ -70,8 +76,11 @@ class AnalysisWidget(_QWidget):
         self.meas = self.meas_sw
         self.amb_meas = self.amb_meas_sw
 
+        self.map = _data.measurement.IntegralMaps()
+
         self.connect_signal_slots()
         self.update_meas_list()
+        self.update_map_list()
 
     def init_tab(self):
         self.load_measurement()
@@ -108,6 +117,17 @@ class AnalysisWidget(_QWidget):
         self.ui.rdb_sw_I2.clicked.connect(self.change_meas_mode)
         self.ui.rdb_fc.clicked.connect(self.change_meas_mode)
         self.ui.pbt_stop_motors.clicked.connect(self.stop_motors)
+        self.ui.cmb_map_name.currentIndexChanged.connect(self.load_map)
+        self.ui.pbt_update_map.clicked.connect(self.update_map_list)
+        self.ui.pbt_load_map.clicked.connect(self.load_map)
+        self.ui.pbt_save_map.clicked.connect(self.save_map)
+        self.ui.chb_I1x.toggled.connect(self.plot_map)
+        self.ui.chb_I1y.toggled.connect(self.plot_map)
+        self.ui.chb_I2x.toggled.connect(self.plot_map)
+        self.ui.chb_I2y.toggled.connect(self.plot_map)
+        self.ui.cmb_transv_pos.currentIndexChanged.connect(self.plot_map)
+        self.ui.cmb_hor.currentIndexChanged.connect(
+            self.update_cmb_transv_pos)
 
     def view_cfg(self):
         try:
@@ -137,8 +157,10 @@ class AnalysisWidget(_QWidget):
 
             self.viewcfg.ui.dsb_width.setValue(self.cfg.width * 10**3)  # [mm]
             self.viewcfg.ui.sb_turns.setValue(self.cfg.turns)
-            self.parent_window.motors.ui.dsb_speed.setValue(self.cfg.speed)  # [rev/s]
-            self.parent_window.motors.ui.dsb_accel.setValue(self.cfg.accel)  # [rev/s^2]
+            # [rev/s]
+            self.parent_window.motors.ui.dsb_speed.setValue(self.cfg.speed)
+            # [rev/s^2]
+            self.parent_window.motors.ui.dsb_accel.setValue(self.cfg.accel)
             _QApplication.processEvents()
         except Exception:
             _traceback.print_exc(file=_sys.stdout)
@@ -154,6 +176,23 @@ class AnalysisWidget(_QWidget):
 
         self.wg_plot.setLayout(_layout)
 
+    def set_map_pyplot(self):
+        """Configures map plot widget"""
+        self.canvas_map = MplCanvas(self, width=5, height=8, dpi=100)
+        _toolbar_map = _NavigationToolbar(self.canvas_map, self)
+
+        self.y1 = self.canvas_map.axes
+        self.y1.set_ylabel('I1 [G.cm]')
+        self.y2 = self.canvas_map.axes.twinx()
+        self.y2.set_ylabel('I2 [kG.cm2]')
+        self.canvas_map.figure.tight_layout()
+
+        _layout_map = _QVBoxLayout()
+        _layout_map.addWidget(self.canvas_map)
+        _layout_map.addWidget(_toolbar_map)
+
+        self.wg_plot_map.setLayout(_layout_map)
+
     def update_meas_list(self):
         """Update measurement list in combobox."""
         try:
@@ -161,6 +200,16 @@ class AnalysisWidget(_QWidget):
             _update_db_name_list(self.meas, self.ui.cmb_meas_name)
             self.ui.cmb_meas_name.currentIndexChanged.connect(
                 self.load_measurement)
+        except Exception:
+            _traceback.print_exc(file=_sys.stdout)
+
+    def update_map_list(self):
+        """Update map list in combobox."""
+        try:
+            self.ui.cmb_map_name.currentIndexChanged.disconnect()
+            _update_db_name_list(self.map, self.ui.cmb_map_name)
+            self.ui.cmb_map_name.currentIndexChanged.connect(
+                self.load_map)
         except Exception:
             _traceback.print_exc(file=_sys.stdout)
 
@@ -220,12 +269,55 @@ class AnalysisWidget(_QWidget):
                 return False
             else:
                 _QMessageBox.warning(self, 'Information',
-                                 'Failed to load this configuration.',
-                                 _QMessageBox.Ok)
+                                     'Failed to load this configuration.',
+                                     _QMessageBox.Ok)
         except Exception:
             _traceback.print_exc(file=_sys.stdout)
             _QMessageBox.warning(self, 'Information',
                                  'Failed to load this configuration.',
+                                 _QMessageBox.Ok)
+            return False
+
+    def load_map(self):
+        """Loads selected integral map from database."""
+        try:
+            self.map.db_update_database(
+                self.database_name,
+                mongo=self.mongo, server=self.server)
+            map_list = []
+            for i in range(self.ui.cmb_map_name.count()):
+                map_list.append(self.ui.cmb_map_name.itemText(i))
+            map_name = self.ui.cmb_map_name.currentText()
+            map_cmb_idx = self.ui.cmb_map_name.currentIndex()
+            if all([map_list.count(map_name) > 1,
+                    map_cmb_idx > 0]):
+                idx = -1
+                for i in range(len(map_list)):
+                    if map_name == map_list[i]:
+                        idx += 1
+            else:
+                idx = 0
+            _id = self.map.db_search_field('name', map_name)[idx]['id']
+            self.map.db_read(_id)
+            self.ui.le_comments.setText(self.map.comments)
+
+            self.update_cmb_transv_pos()
+            _QApplication.processEvents()
+            self.plot_map()
+
+            return True
+        except IndexError:
+            _traceback.print_exc(file=_sys.stdout)
+            if idx == 0:
+                return False
+            else:
+                _QMessageBox.warning(self, 'Information',
+                                     'Failed to load this integral map.',
+                                     _QMessageBox.Ok)
+        except Exception:
+            _traceback.print_exc(file=_sys.stdout)
+            _QMessageBox.warning(self, 'Information',
+                                 'Failed to load this integral map.',
                                  _QMessageBox.Ok)
             return False
 
@@ -365,11 +457,24 @@ class AnalysisWidget(_QWidget):
             _step = meas.step*1e-3  # [m]
             _turns = meas.turns  # number of coil turns
             _gain = meas.gain  # gain
-            _dt = meas.nplc/60  # seconds
-            _duration = meas.duration  # seconds
+            _dt = meas.nplc/60  # [s]
+            _duration = meas.duration  # [s]
 
-            _idx_0 = int(0.9 // _dt)  # initial integral index (1s)
-            _idx_f = int((_duration - 1) // _dt)  # final integral index
+            if not hasattr(meas, 'acq_init_interval'):
+                _acq_init_interval = 1  # [s]
+            else:
+                _acq_init_interval = meas.acq_init_interval - 0.1  # [s]
+
+            if not hasattr(meas, 'acq_init_interval'):
+                _acq_final_interval = 1  # [s]
+            else:
+                _acq_final_interval = meas.acq_final_interval  # [s]
+            # initial integral index
+            _idx_0 = int(_acq_init_interval // _dt)
+            if _idx_0 < 0:
+                _idx_0 = 0
+            # final integral index
+            _idx_f = int((_duration - _acq_final_interval) // _dt)
 
             shape = meas.data_frw.shape
 
@@ -396,8 +501,8 @@ class AnalysisWidget(_QWidget):
                 for idx in range(shape[0]):
                     # dv = ((v[i+1] - v[i])/2)/0.05
                     # f = np.append(f, f[i]+dv)
-                    _f_f_part = meas.data_frw[:idx, j]  # - _offset_f
-                    _f_b_part = meas.data_bck[:idx, j]  # - _offset_b
+                    _f_f_part = meas.data_frw[:idx, j]
+                    _f_b_part = meas.data_bck[:idx, j]
                     _f_f = _np.append(_f_f, _np.trapz(_f_f_part, dx=_dt))
                     _f_b = _np.append(_f_b, _np.trapz(_f_b_part, dx=_dt))
                 if j == 0:
@@ -515,7 +620,7 @@ class AnalysisWidget(_QWidget):
 
         Args:
             plot_from_measurementwidget (bool): flag indicating wether to get
-            measruement data and configurations from measuerement widget (if
+            measurement data and configurations from measurement widget (if
             True) or analysis widget (if False, default)."""
         try:
             if self.ui.rdb_sw.isChecked():
@@ -703,9 +808,483 @@ class AnalysisWidget(_QWidget):
         except Exception:
             _traceback.print_exc(file=_sys.stdout)
 
+    def plot_map(self):
+        """Plots map data."""
+        try:
+            # loads data
+            _map_name = self.ui.cmb_map_name.currentText()
+            _hor_axis = self.ui.cmb_hor.currentText()
+            if _hor_axis != 'Meas #':
+                _transv_pos = float(self.ui.cmb_transv_pos.currentText())
+                if _hor_axis == 'X [mm]':
+                    _transv_axis = 'y_pos'
+                if _hor_axis == 'Y [mm]':
+                    _transv_axis = 'x_pos'
+
+            _maps = _pandas_load_db_maps()
+            _meas_I1, _meas_I2 = _pandas_load_db_measurements()
+
+            _map = _maps.loc[_maps['name'] == _map_name]
+
+            _repetitions = _map['repetitions'].iloc[-1]
+            if _repetitions == 1:
+                _ls = '-'
+            else:
+                _ls = ''
+
+            _I1_id0 = _map['I1_start_id'].values[0] - 1
+            _I1_idf = _map['I1_end_id'].values[0]
+            _I2_id0 = _map['I2_start_id'].values[0] - 1
+            _I2_idf = _map['I2_end_id'].values[0]
+
+            if _I1_idf != 0:
+                _I1 = _meas_I1.iloc[_I1_id0:_I1_idf]
+                if _hor_axis != 'Meas #':
+                    _I1x = _I1.loc[(_I1['motion_axis'] == 'Y') &
+                                   (_I1[_transv_axis] == _transv_pos)]
+                    _I1y = _I1.loc[(_I1['motion_axis'] == 'X') &
+                                   (_I1[_transv_axis] == _transv_pos)]
+                else:
+                    _I1x = _I1.loc[(_I1['motion_axis'] == 'Y')]
+                    _I1y = _I1.loc[(_I1['motion_axis'] == 'X')]
+                if len(_I1x) == 0:
+                    _I1x = None
+                if len(_I1y) == 0:
+                    _I1y = None
+            else:
+                _I1 = None
+                _I1x = None
+                _I1y = None
+
+            if _I2_idf != 0:
+                _I2 = _meas_I2.iloc[_I2_id0:_I2_idf]
+                if _hor_axis != 'Meas #':
+                    _I2x = _I2.loc[(_I2['motion_axis'] == 'Y') &
+                                   (_I2[_transv_axis] == _transv_pos)]
+                    _I2y = _I2.loc[(_I2['motion_axis'] == 'X') &
+                                   (_I2[_transv_axis] == _transv_pos)]
+                else:
+                    _I2x = _I2.loc[(_I2['motion_axis'] == 'Y')]
+                    _I2y = _I2.loc[(_I2['motion_axis'] == 'X')]
+                if len(_I2x) == 0:
+                    _I2x = None
+                if len(_I2y) == 0:
+                    _I2y = None
+            else:
+                _I2 = None
+                _I2x = None
+                _I2y = None
+
+            # Plots data
+            self.y1.cla()
+            self.y2.cla()
+
+            if self.ui.chb_I1x.isChecked() and _I1x is not None:
+                if _hor_axis == 'Meas #':
+                    x = _np.arange(len(_I1x))
+                elif _hor_axis == 'X [mm]':
+                    x = _I1x['x_pos'].values
+                elif _hor_axis == 'Y [mm]':
+                    x = _I1x['y_pos'].values
+                y = _I1x['I1_mean'].values
+                y_err = _I1x['I1_std'].values
+                self.y1.errorbar(
+                    x, y*10**6, yerr=y_err*10**6, color='C0',
+                    ls=_ls, marker='o', label='I1x')
+
+            if self.ui.chb_I1y.isChecked() and _I1y is not None:
+                if _hor_axis == 'Meas #':
+                    x = _np.arange(len(_I1y))
+                elif _hor_axis == 'X [mm]':
+                    x = _I1y['x_pos'].values
+                elif _hor_axis == 'Y [mm]':
+                    x = _I1y['y_pos'].values
+                y = _I1y['I1_mean'].values
+                y_err = _I1y['I1_std'].values
+                self.y1.errorbar(
+                    x, y*10**6, yerr=y_err*10**6, color='C1',
+                    ls=_ls, marker='o', label='I1y')
+
+            self.canvas_map.axes.set_xlabel(_hor_axis)
+
+            if self.ui.chb_I2x.isChecked() and _I2x is not None:
+                if _hor_axis == 'Meas #':
+                    x = _np.arange(len(_I2x))
+                elif _hor_axis == 'X [mm]':
+                    x = _I2x['x_pos'].values
+                elif _hor_axis == 'Y [mm]':
+                    x = _I2x['y_pos'].values
+                y = _I2x['I2_mean'].values
+                y_err = _I2x['I2_std'].values
+                self.y2.errorbar(
+                    x, y*10**5, yerr=y_err*10**5, color='C2',
+                    ls=_ls, marker='v', label='I2x')
+                self.canvas_map.axes.set_ylabel('I2 [kG.cm2]')
+
+            if self.ui.chb_I2y.isChecked() and _I2y is not None:
+                if _hor_axis == 'Meas #':
+                    x = _np.arange(len(_I2y))
+                elif _hor_axis == 'X [mm]':
+                    x = _I2y['x_pos'].values
+                elif _hor_axis == 'Y [mm]':
+                    x = _I2y['y_pos'].values
+                y = _I2y['I2_mean'].values
+                y_err = _I2y['I2_std'].values
+                self.y2.errorbar(
+                    x, y*10**5, yerr=y_err*10**5, color='C3',
+                    ls=_ls, marker='v', label='I2y')
+                self.canvas_map.axes.set_ylabel('I2 [kG.cm2]')
+
+            self.canvas_map.axes.grid(1)
+            self.y1.legend(loc='upper left')
+            self.y2.legend(loc='upper right')
+            self.y1.set_ylabel('I1 [G.cm]')
+            self.y2.set_ylabel('I2 [kG.cm2]')
+            self.canvas_map.figure.tight_layout()
+            self.canvas_map.draw()
+
+        except Exception:
+            _traceback.print_exc(file=_sys.stdout)
+
+    def save_map(self):
+        """Saves current selected field integral map to file. If
+        repetitions > 1, saves last only measurement at each coordinate."""
+        # load data
+        try:
+            _map_name = self.ui.cmb_map_name.currentText()
+
+            _maps = _pandas_load_db_maps()
+            _meas_I1, _meas_I2 = _pandas_load_db_measurements()
+
+            _map = _maps.loc[_maps['name'] == _map_name]
+
+            _I1_id0 = _map['I1_start_id'].values[0] - 1
+            _I1_idf = _map['I1_end_id'].values[0]
+            _I2_id0 = _map['I2_start_id'].values[0] - 1
+            _I2_idf = _map['I2_end_id'].values[0]
+
+            if _I1_idf != 0:
+                _I1 = _meas_I1.iloc[_I1_id0:_I1_idf]
+                _I1x = _I1.loc[_I1['motion_axis'] == 'Y']
+                if len(_I1x) == 0:
+                    _I1x = None
+                _I1y = _I1.loc[_I1['motion_axis'] == 'X']
+                if len(_I1y) == 0:
+                    _I1y = None
+            else:
+                _I1 = None
+                _I1x = None
+                _I1y = None
+
+            if _I2_idf != 0:
+                _I2 = _meas_I2.iloc[_I2_id0:_I2_idf]
+                _I2x = _I2.loc[_I2['motion_axis'] == 'Y']
+                if len(_I2x) == 0:
+                    _I2x = None
+                _I2y = _I2.loc[_I2['motion_axis'] == 'X']
+                if len(_I2y) == 0:
+                    _I2y = None
+            else:
+                _I2 = None
+                _I2x = None
+                _I2y = None
+
+            if _I1 is not None:
+                _x_array = _I1['x_pos'].drop_duplicates().values
+                _y_array = _I1['y_pos'].drop_duplicates().values
+            elif _I2 is not None:
+                _x_array = _I2['x_pos'].drop_duplicates().values
+                _y_array = _I2['y_pos'].drop_duplicates().values
+
+            cols = ['X [mm]', 'Y [mm]',
+                    'I1x [G.cm]', 'I1x_std [G.cm]',
+                    'I1y [G.cm]', 'I1y_std [G.cm]',
+                    'I2x [kG.cm^2]', 'I2x_std [kG.cm^2]',
+                    'I2y [kG.cm^2]', 'I2y_std [kG.cm^2]']
+            _map_df = _pd.DataFrame(columns=cols)
+            for _y in _y_array:
+                for _x in _x_array:
+                    if _I1x is not None:
+                        _I1x_item = _I1x.loc[(_I1x['x_pos'] == _x) &
+                                             (_I1x['y_pos'] == _y)]
+                        _I1x_mean = _I1x_item['I1_mean'].iloc[-1]*10**6
+                        _I1x_std = _I1x_item['I1_std'].iloc[-1]*10**6
+                    else:
+                        _I1x_mean = 0
+                        _I1x_std = 0
+
+                    if _I1y is not None:
+                        _I1y_item = _I1y.loc[(_I1y['x_pos'] == _x) &
+                                             (_I1y['y_pos'] == _y)]
+                        _I1y_mean = _I1y_item['I1_mean'].iloc[-1]*10**6
+                        _I1y_std = _I1y_item['I1_std'].iloc[-1]*10**6
+                    else:
+                        _I1y_mean = 0
+                        _I1y_std = 0
+
+                    if _I2x is not None:
+                        _I2x_item = _I2x.loc[(_I2x['x_pos'] == _x) &
+                                             (_I2x['y_pos'] == _y)]
+                        _I2x_mean = _I2x_item['I2_mean'].iloc[-1]*10**5
+                        _I2x_std = _I2x_item['I2_std'].iloc[-1]*10**5
+                    else:
+                        _I2x_mean = 0
+                        _I2x_std = 0
+
+                    if _I2y is not None:
+                        _I2y_item = _I2y.loc[(_I2y['x_pos'] == _x) &
+                                             (_I2y['y_pos'] == _y)]
+                        _I2y_mean = _I2y_item['I2_mean'].iloc[-1]*10**5
+                        _I2y_std = _I2y_item['I2_std'].iloc[-1]*10**5
+                    else:
+                        _I2y_mean = 0
+                        _I2y_std = 0
+
+                    _aux_df = _pd.DataFrame([(_x, _y,
+                                              _I1x_mean, _I1x_std,
+                                              _I1y_mean, _I1y_std,
+                                              _I2x_mean, _I2x_std,
+                                              _I2y_mean, _I2y_std)],
+                                            columns=cols)
+                    _map_df = _pd.concat([_map_df, _aux_df],
+                                         ignore_index=True)
+
+            _fname = _map_name + '.dat'
+            _map_df.to_csv(_fname, sep='\t', index=False)
+            _QMessageBox.information(self, 'Information',
+                                     'Field integral map saved.',
+                                     _QMessageBox.Ok)
+        except Exception:
+            _QMessageBox.warining(self, 'Warning',
+                                  'Failed to save field integral map.',
+                                  _QMessageBox.Ok)
+            _traceback.print_exc(file=_sys.stdout)
+
+        # try:
+        #     _map_name = self.ui.cmb_map_name.currentText()
+        #
+        #     _maps = _pandas_load_db_maps()
+        #     _map = _maps.loc[_maps['name'] == _map_name]
+        #
+        #     cols = ['X [mm]', 'Y [mm]',
+        #             'I1x [G.cm]', 'I1x_std [G.cm]',
+        #             'I1y [G.cm]', 'I1y_std [G.cm]',
+        #             'I2x [kG.cm^2]', 'I2x_std [kG.cm^2]',
+        #             'I2y [kG.cm^2]', 'I2y_std [kG.cm^2]']
+        #
+        #     _x = _map['x_pos_array'].values
+        #     _y = _map['y_pos_array'].values
+        #     _I1x_mean = _map['I1x'].values
+        #     _I1x_std = _map['I1x_std'].values
+        #     _I1y_mean = _map['I1y'].values
+        #     _I1y_std = _map['I1y_std'].values
+        #     _I2x_mean = _map['I2x'].values
+        #     _I2x_std = _map['I2x_std'].values
+        #     _I2y_mean = _map['I2y'].values
+        #     _I2y_std = _map['I2y_std'].values
+        #
+        #     _map_df = _pd.DataFrame([(_x, _y,
+        #                               _I1x_mean, _I1x_std,
+        #                               _I1y_mean, _I1y_std,
+        #                               _I2x_mean, _I2x_std,
+        #                               _I2y_mean, _I2y_std)],
+        #                             columns=cols)
+        #
+        #     _fname = _map_name + '.dat'
+        #     _map_df.to_csv(_fname, sep='\t', index=False)
+        #     _QMessageBox.information(self, 'Information',
+        #                              'Field integral map saved.',
+        #                              _QMessageBox.Ok)
+        # except Exception:
+        #     _QMessageBox.warining(self, 'Warning',
+        #                           'Failed to save field integral map.',
+        #                           _QMessageBox.Ok)
+        #     _traceback.print_exc(file=_sys.stdout)
+
+    def update_map_arrays(self, map_data):
+        """Updates field integral map data position and field integral arrays.
+        If one of the integrals or components were not selected to be measured,
+        their values will be set to zero.
+        If repetitions > 1, saves only the last measurement at each coordinate.
+
+        Args:
+            map_data (IntegralMaps): Integral maps database class to be
+                                     updated."""
+        try:
+            _meas_I1, _meas_I2 = _pandas_load_db_measurements()
+
+            _map = map_data
+
+            _I1_id0 = _map.I1_start_id - 1
+            _I1_idf = _map.I1_end_id
+            _I2_id0 = _map.I2_start_id - 1
+            _I2_idf = _map.I2_end_id
+
+            if _I1_idf != 0:
+                _I1 = _meas_I1.iloc[_I1_id0:_I1_idf]
+                _I1x = _I1.loc[_I1['motion_axis'] == 'Y']
+                if len(_I1x) == 0:
+                    _I1x = None
+                _I1y = _I1.loc[_I1['motion_axis'] == 'X']
+                if len(_I1y) == 0:
+                    _I1y = None
+            else:
+                _I1 = None
+                _I1x = None
+                _I1y = None
+
+            if _I2_idf != 0:
+                _I2 = _meas_I2.iloc[_I2_id0:_I2_idf]
+                _I2x = _I2.loc[_I2['motion_axis'] == 'Y']
+                if len(_I2x) == 0:
+                    _I2x = None
+                _I2y = _I2.loc[_I2['motion_axis'] == 'X']
+                if len(_I2y) == 0:
+                    _I2y = None
+            else:
+                _I2 = None
+                _I2x = None
+                _I2y = None
+
+            if _I1 is not None:
+                _x_array = _I1['x_pos'].drop_duplicates(keep='last').values
+                _y_array = _I1['y_pos'].drop_duplicates(keep='last').values
+            elif _I2 is not None:
+                _x_array = _I2['x_pos'].drop_duplicates(keep='last').values
+                _y_array = _I2['y_pos'].drop_duplicates(keep='last').values
+
+            _cols = cols = ['X [mm]', 'Y [mm]',
+                            'I1x [G.cm]', 'I1x_std [G.cm]',
+                            'I1y [G.cm]', 'I1y_std [G.cm]',
+                            'I2x [kG.cm^2]', 'I2x_std [kG.cm^2]',
+                            'I2y [kG.cm^2]', 'I2y_std [kG.cm^2]']
+            _map_df = _pd.DataFrame(columns=cols)
+            for _y in _y_array:
+                for _x in _x_array:
+                    if _I1x is not None:
+                        _I1x_item = _I1x.loc[(_I1x['x_pos'] == _x) &
+                                             (_I1x['y_pos'] == _y)]
+                        _I1x_mean = _I1x_item['I1_mean'].iloc[-1]*10**6
+                        _I1x_std = _I1x_item['I1_std'].iloc[-1]*10**6
+                    else:
+                        _I1x_mean = 0
+                        _I1x_std = 0
+
+                    if _I1y is not None:
+                        _I1y_item = _I1y.loc[(_I1y['x_pos'] == _x) &
+                                             (_I1y['y_pos'] == _y)]
+                        _I1y_mean = _I1y_item['I1_mean'].iloc[-1]*10**6
+                        _I1y_std = _I1y_item['I1_std'].iloc[-1]*10**6
+                    else:
+                        _I1y_mean = 0
+                        _I1y_std = 0
+
+                    if _I2x is not None:
+                        _I2x_item = _I2x.loc[(_I2x['x_pos'] == _x) &
+                                             (_I2x['y_pos'] == _y)]
+                        _I2x_mean = _I2x_item['I2_mean'].iloc[-1]*10**5
+                        _I2x_std = _I2x_item['I2_std'].iloc[-1]*10**5
+                    else:
+                        _I2x_mean = 0
+                        _I2x_std = 0
+
+                    if _I2y is not None:
+                        _I2y_item = _I2y.loc[(_I2y['x_pos'] == _x) &
+                                             (_I2y['y_pos'] == _y)]
+                        _I2y_mean = _I2y_item['I2_mean'].iloc[-1]*10**5
+                        _I2y_std = _I2y_item['I2_std'].iloc[-1]*10**5
+                    else:
+                        _I2y_mean = 0
+                        _I2y_std = 0
+
+                    _map.x_pos_array = _x
+                    _map.y_pos_array = _y
+                    _map.I1x = _I1x_mean
+                    _map.I1x_std = _I1x_std
+                    _map.I1y = _I1y_mean
+                    _map.I1y_std = _I1y_std
+                    _map.I2x = _I2x_mean
+                    _map.I2x_std = _I2x_std
+                    _map.I2y = _I2y_mean
+                    _map.I2y_std = _I2y_std
+
+                    return True
+
+        except Exception:
+            _QMessageBox.warining(self, 'Warning',
+                                  'Failed to update integral map arrays.',
+                                  _QMessageBox.Ok)
+            _traceback.print_exc(file=_sys.stdout)
+            return False
+
+    def update_cmb_transv_pos(self):
+        """Updates transversal positions combobox in order to plot map data"""
+        try:
+            _map_name = self.ui.cmb_map_name.currentText()
+            _hor_axis = self.ui.cmb_hor.currentText()
+
+            _maps = _pandas_load_db_maps()
+            # _meas_I1, _meas_I2 = _pandas_load_db_measurements()
+            #
+            _map = _maps.loc[_maps['name'] == _map_name]
+            #
+            # _I1_id0 = _map['I1_start_id'].values[0] - 1
+            # _I1_idf = _map['I1_end_id'].values[0]
+            # _I2_id0 = _map['I2_start_id'].values[0] - 1
+            # _I2_idf = _map['I2_end_id'].values[0]
+            #
+            # if _I1_idf != 0:
+            #     _I1 = _meas_I1.iloc[_I1_id0:_I1_idf]
+            #     _I1x = _I1.loc[_I1['motion_axis'] == 'Y']
+            #     if len(_I1x) == 0:
+            #         _I1x = None
+            #     _I1y = _I1.loc[_I1['motion_axis'] == 'X']
+            #     if len(_I1y) == 0:
+            #         _I1y = None
+            # else:
+            #     _I1 = None
+            #     _I1x = None
+            #     _I1y = None
+            #
+            # if _I2_idf != 0:
+            #     _I2 = _meas_I2.iloc[_I2_id0:_I2_idf]
+            #     _I2x = _I2.loc[_I2['motion_axis'] == 'Y']
+            #     if len(_I2x) == 0:
+            #         _I2x = None
+            #     _I2y = _I2.loc[_I2['motion_axis'] == 'X']
+            #     if len(_I2y) == 0:
+            #         _I2y = None
+            # else:
+            #     _I2 = None
+            #     _I2x = None
+            #     _I2y = None
+            #
+            # if _I1 is not None:
+            #     _x_pos_array = _I1['x_pos'].drop_duplicates().values
+            #     _y_pos_array = _I1['y_pos'].drop_duplicates().values
+            # elif _I2 is not None:
+            #     _x_pos_array = _I2['x_pos'].drop_duplicates().values
+            #     _y_pos_array = _I2['y_pos'].drop_duplicates().values
+
+            _x_pos_array = _map['x_pos_array'].values
+            _y_pos_array = _map['y_pos_array'].values
+
+            self.ui.cmb_transv_pos.clear()
+
+            if _hor_axis != 'Meas #':
+                if _hor_axis == 'X [mm]':
+                    _pos_array = _y_pos_array
+                if _hor_axis == 'Y [mm]':
+                    _pos_array = _x_pos_array
+                self.ui.cmb_transv_pos.addItems(
+                    [str(pos) for pos in _pos_array])
+                self.ui.cmb_transv_pos.setCurrentIndex(0)
+
+        except Exception:
+            _traceback.print_exc(file=_sys.stdout)
+
     def stop_motors(self):
         try:
             self.motors.ppmac.write('#1..6k')
         except Exception:
             _traceback.print_exc(file=_sys.stdout)
-

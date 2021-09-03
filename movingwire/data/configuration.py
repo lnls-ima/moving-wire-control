@@ -111,6 +111,8 @@ class PpmacConfig(_database.DatabaseAndFileDocument):
             {'field': 'steps_per_turn', 'dtype': int, 'not_null': True}),
         ('pos_x',
             {'field': 'pos_x', 'dtype': float, 'not_null': True}),
+        ('x_step',
+            {'field': 'x_step', 'dtype': float, 'not_null': True}),
         ('speed_x',
             {'field': 'speed_x', 'dtype': float, 'not_null': True}),
         ('accel_x',
@@ -123,8 +125,12 @@ class PpmacConfig(_database.DatabaseAndFileDocument):
             {'field': 'max_x', 'dtype': float, 'not_null': True}),
         ('x_sf',
             {'field': 'x_sf', 'dtype': float, 'not_null': True}),
+        ('x_offset',
+            {'field': 'x_offset', 'dtype': float, 'not_null': False}),
         ('pos_y',
             {'field': 'pos_y', 'dtype': float, 'not_null': True}),
+        ('y_step',
+            {'field': 'y_step', 'dtype': float, 'not_null': True}),
         ('speed_y',
             {'field': 'speed_y', 'dtype': float, 'not_null': True}),
         ('accel_y',
@@ -139,6 +145,8 @@ class PpmacConfig(_database.DatabaseAndFileDocument):
             {'field': 'y_sf', 'dtype': float, 'not_null': True}),
         ('y_stps_per_cnt',
             {'field': 'y_stps_per_cnt', 'dtype': float, 'not_null': True}),
+        ('y_offset',
+            {'field': 'y_offset', 'dtype': float, 'not_null': False}),
         ('home_offset1',
             {'field': 'home_offset1', 'dtype': int, 'not_null': True}),
         ('home_offset2',
@@ -259,8 +267,79 @@ class MeasurementConfig(_database.DatabaseAndFileDocument):
             {'field': 'duration', 'dtype': float, 'not_null': True}),
         ('nmeasurements',
             {'field': 'nmeasurements', 'dtype': int, 'not_null': True}),
-        ('max_init_error',
+        ('max_init_error',  # [um]
             {'field': 'max_init_error', 'dtype': float, 'not_null': True}),
+        ('acq_init_interval',  # [s]
+            {'field': 'acq_init_interval', 'dtype': float, 'not_null': False}),
+        ('acq_final_interval',  # [s]
+            {'field': 'acq_final_interval', 'dtype': float, 'not_null': False}),
+        ])
+
+    def __init__(
+            self, database_name=None, mongo=False, server=None):
+        """Initialize object.
+
+        Args:
+            filename (str): connection configuration filepath.
+            database_name (str): database file path (sqlite) or name (mongo).
+            idn (int): id in database table (sqlite) / collection (mongo).
+            mongo (bool): flag indicating mongoDB (True) or sqlite (False).
+            server (str): MongoDB server.
+
+        """
+        super().__init__(
+            database_name=database_name, mongo=mongo, server=server)
+
+
+class IntegralMapsCfg(_database.DatabaseAndFileDocument):
+    """Read, write and store stretched wire integrals map configuration."""
+
+    label = 'IntegralMapsCfg'
+    collection_name = 'integral_maps_cfg'
+    db_dict = _collections.OrderedDict([
+        ('idn', {'field': 'id', 'dtype': int, 'not_null': True}),
+        ('date', {'field': 'date', 'dtype': str, 'not_null': True}),
+        ('hour', {'field': 'hour', 'dtype': str, 'not_null': True}),
+        ('software_version',
+            {'field': 'software_version', 'dtype': str, 'not_null': False}),
+        ('name',
+            {'field': 'name', 'dtype': str, 'not_null': True, 'unique': True}),
+        ('comments',
+            {'field': 'comments', 'dtype': str, 'not_null': True}),
+        ('Ix',
+            {'field': 'Ix', 'dtype': int, 'not_null': True}),
+        ('Iy',
+            {'field': 'Iy', 'dtype': int, 'not_null': True}),
+        ('I1',
+            {'field': 'I1', 'dtype': int, 'not_null': True}),
+        ('I2',
+            {'field': 'I2', 'dtype': int, 'not_null': True}),
+        ('I1x_amb_id',
+            {'field': 'I1x_amb_id', 'dtype': int, 'not_null': True}),
+        ('I1y_amb_id',
+            {'field': 'I1y_amb_id', 'dtype': int, 'not_null': True}),
+        ('I2x_amb_id',
+            {'field': 'I2x_amb_id', 'dtype': int, 'not_null': True}),
+        ('I2y_amb_id',
+            {'field': 'I2y_amb_id', 'dtype': int, 'not_null': True}),
+        ('x_start_pos',
+            {'field': 'x_start_pos', 'dtype': float, 'not_null': True}),
+        ('x_end_pos',
+            {'field': 'x_end_pos', 'dtype': float, 'not_null': True}),
+        ('x_step',
+            {'field': 'x_step', 'dtype': float, 'not_null': True}),
+        ('x_duration',
+            {'field': 'x_duration', 'dtype': float, 'not_null': True}),
+        ('y_start_pos',
+            {'field': 'y_start_pos', 'dtype': float, 'not_null': True}),
+        ('y_end_pos',
+            {'field': 'y_end_pos', 'dtype': float, 'not_null': True}),
+        ('y_step',
+            {'field': 'y_step', 'dtype': float, 'not_null': True}),
+        ('y_duration',
+            {'field': 'y_duration', 'dtype': float, 'not_null': True}),
+        ('repetitions',
+            {'field': 'repetitions', 'dtype': int, 'not_null': True}),
     ])
 
     def __init__(
