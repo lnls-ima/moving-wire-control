@@ -194,10 +194,10 @@
         <item row="4" column="2">
          <widget class="QComboBox" name="cmb_range">
           <property name="currentText">
-           <string>V</string>
+           <string>10 * V</string>
           </property>
           <property name="currentIndex">
-           <number>1</number>
+           <number>2</number>
           </property>
           <item>
            <property name="text">
@@ -282,6 +282,9 @@
        <layout class="QGridLayout" name="gridLayout_2">
         <item row="2" column="2">
          <widget class="QRadioButton" name="rdb_fc">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
           <property name="text">
            <string>Flip Coil I1</string>
           </property>

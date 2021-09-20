@@ -356,3 +356,34 @@ class IntegralMapsCfg(_database.DatabaseAndFileDocument):
         """
         super().__init__(
             database_name=database_name, mongo=mongo, server=server)
+
+
+class FiducializationCfg(_database.DatabaseAndFileDocument):
+    """Read, write and store stretched wire fiducialization configuration."""
+
+    label = 'FiducializationCfg'
+    collection_name = 'fiducialization_cfg'
+    db_dict = _collections.OrderedDict([
+        ('idn', {'field': 'id', 'dtype': int, 'not_null': True}),
+        ('date', {'field': 'date', 'dtype': str, 'not_null': True}),
+        ('hour', {'field': 'hour', 'dtype': str, 'not_null': True}),
+        ('offset_xa',
+            {'field': 'offset_xa', 'dtype': int, 'not_null': True}),
+        ('offset_xb',
+            {'field': 'offset_xb', 'dtype': int, 'not_null': True}),
+    ])
+
+    def __init__(
+            self, database_name=None, mongo=False, server=None):
+        """Initialize object.
+
+        Args:
+            filename (str): connection configuration filepath.
+            database_name (str): database file path (sqlite) or name (mongo).
+            idn (int): id in database table (sqlite) / collection (mongo).
+            mongo (bool): flag indicating mongoDB (True) or sqlite (False).
+            server (str): MongoDB server.
+
+        """
+        super().__init__(
+            database_name=database_name, mongo=mongo, server=server)

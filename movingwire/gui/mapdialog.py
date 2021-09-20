@@ -23,7 +23,7 @@ from movingwire.gui.utils import (
 
 
 class MapDialog(_QDialog):
-    """Moving Wire measurement progress dialog."""
+    """Moving Wire integral maps dialog."""
 
     def __init__(self, parent=None):
         """Set up the ui and create connections."""

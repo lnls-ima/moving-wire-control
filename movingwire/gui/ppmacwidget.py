@@ -17,6 +17,9 @@ from qtpy.QtCore import (
     )
 import qtpy.uic as _uic
 
+from movingwire.gui.fiducialdialog import FiducialDialog \
+    as _FiducialDialog
+
 from movingwire.gui.utils import (
     get_ui_file as _get_ui_file,
     sleep as _sleep,
@@ -45,12 +48,14 @@ class PpmacWidget(_QWidget):
 
         self.ppmac = _ppmac
         self.cfg = _data.configuration.PpmacConfig()
+        self.fiduc_cfg = _data.configuration.FiducializationCfg()
 
         self.steps_per_turn = 102400  # rotation motor steps/turn
         # self.y_stps_per_cnt = 102.4  # steps/encoder count
 
         # self.cfg.y_stps_per_cnt = self.y_stps_per_cnt  # steps/encoder count
 
+        self.update_flag = True
         self.timer = _QTimer()
         self.timer.start(1000)
 
@@ -100,12 +105,14 @@ class PpmacWidget(_QWidget):
         self.ui.pbt_move_x.clicked.connect(self.move_x_ui)
         self.ui.pbt_move_y.clicked.connect(self.move_y_ui)
         self.ui.pbt_stop_motors.clicked.connect(self.stop_motors)
+        self.ui.pbt_fiducialization.clicked.connect(self.fiducial_dialog)
 
     def update_position(self):
         """Updates position displays on ui."""
         try:
             if hasattr(_ppmac, 'ppmac'):
-                if all([not _ppmac.ppmac.closed,
+                if all([self.update_flag,
+                        not _ppmac.ppmac.closed,
                         self.parent().currentWidget() == self]):
                     self.pos = _ppmac.read_motor_pos([1, 2, 3, 4, 7, 8])
                     self.ui.lcd_pos1.display(
@@ -217,6 +224,28 @@ class PpmacWidget(_QWidget):
                                  _QMessageBox.Ok)
             _traceback.print_exc(file=_sys.stdout)
             return False
+
+    def load_fiduc_cfg(self):
+        """Loads fiducialization configuration from database."""
+        try:
+            self.fiduc_cfg.db_update_database(
+                    self.database_name,
+                    mongo=self.mongo, server=self.server)
+            self.fiduc_cfg.db_read(1)
+            return True
+        except Exception:
+            _traceback.print_exc(file=_sys.stdout)
+            return False
+
+    def write_fiduc_offsets(self, offset_xa, offset_xb):
+        """Writes fiducialization offsets on DeltaTau.
+
+        Args:
+            offset_xa (int): Motor Xa offset in encoder counts;
+            offset_xb (int): Motor Xb offset in encoder counts.
+        Returns:
+            True if successful, False othrewise."""
+        pass
 
     def load_cfg_into_ui(self):
         """Loads database configuration into ui widgets."""
@@ -330,6 +359,20 @@ class PpmacWidget(_QWidget):
                 _ppmac.write(msg)
             _sleep(0.1)
             _ppmac.read()
+
+            # Checks fiducialization parameters
+            xa_comp_pos = int(_ppmac.query_motor_param(1, 'CompPos'))
+            xb_comp_pos = int(_ppmac.query_motor_param(3, 'CompPos'))
+            self.load_fiduc_cfg()
+            if any([xa_comp_pos != int(self.fiduc_cfg.offset_xa),
+                    xb_comp_pos != int(self.fiduc_cfg.offset_xb)]):
+                _QMessageBox.warning(self, 'Warning',
+                                     'Fiducialization parameters are wrong;'
+                                     ' Please home the X axis.',
+                                     _QMessageBox.Ok)
+            _QMessageBox.information(self, 'Information',
+                                     'PPMAC configured.',
+                                     _QMessageBox.Ok)
             self.timer.start(1000)
         except Exception:
             _traceback.print_exc(file=_sys.stdout)
@@ -384,10 +427,15 @@ class PpmacWidget(_QWidget):
             # self.ui.chb_homed_x.setCheckable(True)
             self.ui.groupBox_3.setEnabled(False)
             self.ui.pbt_configure.setEnabled(False)
+            self.ui.pbt_fiducialization.setEnabled(False)
             self.parent_window.ui.twg_main.setTabEnabled(3, False)
             _QApplication.processEvents()
             self.timer.stop()
             _sleep(0.5)
+
+            # Clears fiducialization offsets
+            _ppmac.set_motor_param(1, 'CompPos', 0)
+            _ppmac.set_motor_param(3, 'CompPos', 0)
 #             with _ppmac.lock_ppmac:
             _ppmac.write('#1,3j/')
             _ppmac.write('enable plc HomeX')
@@ -403,6 +451,12 @@ class PpmacWidget(_QWidget):
                     raise RuntimeError('X Homing timeout (10 minutes).')
 
             _sleep(2)
+
+            # Sets fiducialization parameters again:
+            self.load_fiduc_cfg()
+            _ppmac.set_motor_param(1, 'CompPos', self.fiduc_cfg.offset_xa)
+            _ppmac.set_motor_param(3, 'CompPos', self.fiduc_cfg.offset_xb)
+
             self.move_x(0)
 
             self.ui.groupBox_3.setEnabled(True)
@@ -410,6 +464,7 @@ class PpmacWidget(_QWidget):
             _QApplication.processEvents()
             # self.ui.chb_homed_x.setCheckable(False)
             self.ui.pbt_configure.setEnabled(True)
+            self.ui.pbt_fiducialization.setEnabled(True)
             self.parent_window.ui.twg_main.setTabEnabled(3, True)
             # move_y enables timer, no need to start it again
             # self.timer.start(1000)
@@ -422,6 +477,7 @@ class PpmacWidget(_QWidget):
             self.ui.chb_homed_x.setChecked(False)
             # self.ui.chb_homed_x.setCheckable(False)
             self.ui.pbt_configure.setEnabled(True)
+            self.ui.pbt_fiducialization.setEnabled(True)
             self.parent_window.ui.twg_main.setTabEnabled(3, True)
 
             _traceback.print_exc(file=_sys.stdout)
@@ -449,6 +505,7 @@ class PpmacWidget(_QWidget):
             # self.ui.chb_homed_y.setCheckable(True)
             self.ui.groupBox_3.setEnabled(False)
             self.ui.pbt_configure.setEnabled(False)
+            self.ui.pbt_fiducialization.setEnabled(False)
             self.timer.stop()
             _sleep(0.5)
 
@@ -479,6 +536,7 @@ class PpmacWidget(_QWidget):
             # self.ui.chb_homed_y.setCheckable(False)
             self.ui.groupBox_3.setEnabled(True)
             self.ui.pbt_configure.setEnabled(True)
+            self.ui.pbt_fiducialization.setEnabled(True)
             # move_y enables timer, no need to start it again
             # self.timer.start(1000)
             _QMessageBox.information(self, 'Information',
@@ -490,6 +548,7 @@ class PpmacWidget(_QWidget):
             # self.ui.chb_homed_y.setCheckable(False)
             self.ui.groupBox_3.setEnabled(True)
             self.ui.pbt_configure.setEnabled(True)
+            self.ui.pbt_fiducialization.setEnabled(True)
 
             _traceback.print_exc(file=_sys.stdout)
             self.timer.start(1000)
@@ -748,14 +807,6 @@ class PpmacWidget(_QWidget):
             absolute = False
         self.move_y(position, absolute)
 
-    def move_single_motor(self, motor, position):
-        """Moves a single motor.
-
-        Args:
-            motor (int): moving motor number;
-            position (float): target position in [mm].
-        """
-
     def stop_motors(self):
         """Stops and disables all motors."""
         try:
@@ -765,3 +816,8 @@ class PpmacWidget(_QWidget):
         except Exception:
             self.timer.start(1000)
             _traceback.print_exc(file=_sys.stdout)
+
+    def fiducial_dialog(self):
+        self.update_flag = False
+        self.fid_dialog = _FiducialDialog(self.parent_window.motors)
+        self.fid_dialog.show()

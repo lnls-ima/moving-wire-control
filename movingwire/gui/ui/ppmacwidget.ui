@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>800</width>
-    <height>760</height>
+    <height>786</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -248,6 +248,9 @@
    </item>
    <item row="2" column="0">
     <widget class="QGroupBox" name="groupBox_2">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
      <property name="title">
       <string>Rotation Parameters</string>
      </property>
@@ -511,6 +514,9 @@
          <layout class="QGridLayout" name="gridLayout_3">
           <item row="1" column="3">
            <widget class="QCheckBox" name="chb_homed_y">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
             <property name="text">
              <string>Y Homed</string>
             </property>
@@ -551,6 +557,9 @@
           </item>
           <item row="0" column="3">
            <widget class="QCheckBox" name="chb_homed_x">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
             <property name="text">
              <string>X Homed</string>
             </property>
@@ -691,6 +700,9 @@
         </item>
         <item row="8" column="0">
          <widget class="QLabel" name="label_19">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
           <property name="text">
            <string>Motor 1 Encoder Ref [counts]:</string>
           </property>
@@ -739,10 +751,10 @@
         <item row="5" column="1">
          <widget class="QDoubleSpinBox" name="dsb_max_x">
           <property name="minimum">
-           <double>-60.000000000000000</double>
+           <double>-100.000000000000000</double>
           </property>
           <property name="maximum">
-           <double>60.000000000000000</double>
+           <double>100.000000000000000</double>
           </property>
           <property name="value">
            <double>43.000000000000000</double>
@@ -775,6 +787,9 @@
         </item>
         <item row="9" column="0">
          <widget class="QLabel" name="label_17">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
           <property name="text">
            <string>Motor 3 Encoder Ref [counts]:</string>
           </property>
@@ -790,10 +805,10 @@
         <item row="4" column="1">
          <widget class="QDoubleSpinBox" name="dsb_min_x">
           <property name="minimum">
-           <double>-60.000000000000000</double>
+           <double>-100.000000000000000</double>
           </property>
           <property name="maximum">
-           <double>60.000000000000000</double>
+           <double>100.000000000000000</double>
           </property>
           <property name="value">
            <double>-43.000000000000000</double>
@@ -869,6 +884,9 @@
         </item>
         <item row="10" column="0">
          <widget class="QLabel" name="label_24">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
           <property name="text">
            <string>Motor 2 Encoder Ref [counts]:</string>
           </property>
@@ -927,7 +945,7 @@
         <item row="8" column="1">
          <widget class="QDoubleSpinBox" name="dsb_max_pos_error">
           <property name="value">
-           <double>2.000000000000000</double>
+           <double>4.000000000000000</double>
           </property>
          </widget>
         </item>
@@ -947,6 +965,9 @@
         </item>
         <item row="11" column="0">
          <widget class="QLabel" name="label_25">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
           <property name="text">
            <string>Motor 4 Encoder Ref [counts]:</string>
           </property>
@@ -962,10 +983,10 @@
         <item row="5" column="1">
          <widget class="QDoubleSpinBox" name="dsb_max_y">
           <property name="minimum">
-           <double>-15.000000000000000</double>
+           <double>-40.000000000000000</double>
           </property>
           <property name="maximum">
-           <double>15.000000000000000</double>
+           <double>40.000000000000000</double>
           </property>
           <property name="value">
            <double>15.000000000000000</double>
@@ -1009,10 +1030,10 @@
         <item row="4" column="1">
          <widget class="QDoubleSpinBox" name="dsb_min_y">
           <property name="minimum">
-           <double>-15.000000000000000</double>
+           <double>-40.000000000000000</double>
           </property>
           <property name="maximum">
-           <double>15.000000000000000</double>
+           <double>40.000000000000000</double>
           </property>
           <property name="value">
            <double>-15.000000000000000</double>
@@ -1057,6 +1078,19 @@
        </property>
        <property name="text">
         <string>Configure PPMAC</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pbt_fiducialization">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="text">
+        <string>Fiducialization</string>
        </property>
       </widget>
      </item>

@@ -97,6 +97,11 @@ class Multimeter(_Agilent3458ALib.Agilent3458AGPIB):
         self.configure_reading_format('DREAL')
         self.send_command('DISP ON')
 
+    def configure_ohm(self, nplc=2):
+        time = nplc/60
+        self.configure_volt(nplc, time, 1)
+        self.send_command('OHM 1e3')
+
     def configure_reading_format(self, formtype):
         """Configure multimeter reading format.
         Args:
@@ -299,16 +304,17 @@ class Ppmac(Ppmac_eth):
         try:
             self.write("Motor[{0}].{1}={2}".format(motor, param, value))
             _sleep(0.1)
-            _ans = self.read()
-            _ans = _ans.split('=')[-1].strip('\r\n\x06')
-            if value - 1e-3 <= _ans <= value + 1e-3:
-                return True
-            else:
-                return False
+            # _ans = self.read()
+            # _ans = _ans.split('=')[-1].strip('\r\n\x06')
+            # if value - 1e-3 <= _ans <= value + 1e-3:
+            #     return True
+            # else:
+            #     return False
+            return True
 
         except Exception:
             _traceback.print_exc(file=_sys.stdout)
-            return None
+            return False
 
     def motor_fault(self, motor):
         """Checks if the motor amplifier has a fault.
@@ -367,6 +373,25 @@ class Ppmac(Ppmac_eth):
             self.write('#{0}k'.format(disable))
             self.write('#{0}j/'.format(enable))
             return True
+        except Exception:
+            _traceback.print_exc(file=_sys.stdout)
+            return False
+
+    def set_motor_pos(self, motor, position):
+        """Sets current position on the selected motor.
+
+        Args:
+            motor (int): motor number;
+            position (int): desired position in encoder counts units.
+
+        Returns:
+            True if successfull; False otherwise."""
+        try:
+            current_home_offset = int(self.query_motor_param(motor,
+                                                             'HomeOffset'))
+            self.set_motor_param(motor, 'HomeOffset', -1*position)
+            self.write('#{0}hmz'.format(motor))
+            self.set_motor_param(motor, 'HomeOffset', current_home_offset)
         except Exception:
             _traceback.print_exc(file=_sys.stdout)
             return False
