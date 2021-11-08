@@ -41,11 +41,14 @@
      <layout class="QGridLayout" name="gridLayout_3">
       <item row="0" column="0" colspan="2">
        <widget class="QCheckBox" name="chb_ps_en">
+        <property name="enabled">
+         <bool>true</bool>
+        </property>
         <property name="text">
          <string>Enable</string>
         </property>
         <property name="checked">
-         <bool>true</bool>
+         <bool>false</bool>
         </property>
        </widget>
       </item>

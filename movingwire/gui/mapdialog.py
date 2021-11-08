@@ -163,7 +163,7 @@ class MapDialog(_QDialog):
             if self.cfg.I1x_amb_id == 0:
                 self.ui.chb_Iamb.setChecked(True)
             else:
-                self.ui.chb_Iamb.setChecked(True)
+                self.ui.chb_Iamb.setChecked(False)
                 _I1x_name = self.get_Iamb_name(self.meas_sw,
                                                self.cfg.I1x_amb_id)
                 _I1y_name = self.get_Iamb_name(self.meas_sw,
@@ -282,10 +282,12 @@ class MapDialog(_QDialog):
                                 (_meas_I1['motion_axis'] == 'X')]
 
         _I2x_amb = _meas_I2.loc[(_meas_I2['Iamb_id'] == 0) &
-                                ((_meas_I2['motion_axis'] == 'Ya') |
+                                ((_meas_I2['motion_axis'] == 'Y') |
+                                 (_meas_I2['motion_axis'] == 'Ya') |
                                  (_meas_I2['motion_axis'] == 'Yb'))]
         _I2y_amb = _meas_I2.loc[(_meas_I2['Iamb_id'] == 0) &
-                                ((_meas_I2['motion_axis'] == 'Xa') |
+                                ((_meas_I2['motion_axis'] == 'X') |
+                                 (_meas_I2['motion_axis'] == 'Xa') |
                                  (_meas_I2['motion_axis'] == 'Xb'))]
 
         self.ui.cmb_I1x_amb.addItems(

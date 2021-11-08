@@ -5,7 +5,7 @@
 from movingwire.gui import movingwireapp
 
 
-THREAD = False
+THREAD = True
 
 
 if THREAD:

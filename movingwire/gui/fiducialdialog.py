@@ -231,11 +231,14 @@ class FiducialDialog(_QDialog):
 
             if self.ui.cmb_x_motor.currentIndex() == 0:
                 motor = 1
+                move_motor = motor
                 if self.last_motor != 0:
-                    move_motor = motor
                     if self.offset_Xa != 0:
                         self.motors.move_x(self.offset_Xa*self.motors.cfg.x_sf,
-                                           True, None)
+                                           True, 1)
+                    if self.offset_Xb != 0:
+                        self.motors.move_x(self.offset_Xb*self.motors.cfg.x_sf,
+                                           True, 3)
                 else:
                     if self.offset_Xa != 0:
                         if self.offset_Xb == 0:
@@ -255,11 +258,14 @@ class FiducialDialog(_QDialog):
                             True, _init_motor)
             else:
                 motor = 3
+                move_motor = motor
                 if self.last_motor != 0:
-                    move_motor = motor
+                    if self.offset_Xa != 0:
+                        self.motors.move_x(self.offset_Xa*self.motors.cfg.x_sf,
+                                           True, 1)
                     if self.offset_Xb != 0:
                         self.motors.move_x(self.offset_Xb*self.motors.cfg.x_sf,
-                                           True, None)
+                                           True, 3)
                 else:
                     if self.offset_Xa != 0:
                         if self.offset_Xb == 0:
@@ -286,8 +292,8 @@ class FiducialDialog(_QDialog):
                 # If short circuited, retreat until circuit opens
                 while all([self.read_short_circuit(),
                            not self.abort_flag]):
-                    self.motors.move_x(-1*step, False, move_motor)
-                    _sleep(0.05)
+                    self.motors.move_x(-5*step, False, move_motor)
+                    _sleep(0.1)
                     self.update_position()
                 if self.abort_flag:
                     self.abort()
@@ -304,6 +310,7 @@ class FiducialDialog(_QDialog):
                     self.abort()
                     return False
                 pos_closed = _ppmac.read_motor_pos([motor])[0]
+                _sleep(0.5)
 
                 # Retreats until circuit opens again
                 n_back_steps = 0
@@ -316,6 +323,8 @@ class FiducialDialog(_QDialog):
                 if self.abort_flag:
                     self.abort()
                     return False
+                pos_open = _ppmac.read_motor_pos([motor])[0]
+                _sleep(0.5)
 
                 # Advances to check if the circuit closes at the same position
                 while not self.read_short_circuit():
@@ -328,29 +337,31 @@ class FiducialDialog(_QDialog):
                 pos_closed_2 = _ppmac.read_motor_pos([motor])[0]
 
                 if self.last_motor == 0:
-                    self.offset_Xa = pos_closed
-                    self.offset_Xb = pos_closed
+                    self.offset_Xa = pos_open
+                    self.offset_Xb = pos_open
+
+                print(pos_closed*2e-5, pos_closed_2*2e-5, pos_open*2e-5)
 
             # if offset difference is greater than 2 steps, updates its value
             if motor == 1:
                 if (abs(self.offset_Xa - pos_closed_2) >
                         round(abs(2 * step) / self.motors.cfg.x_sf, 0)):
-                    self.offset_Xa = pos_closed_2
+                    self.offset_Xa = pos_open
                     self.offset_Xa_changed = True
                     if self.last_motor == 0:
                         # Updates both offsets at first iteration
-                        self.offset_Xb = pos_closed_2
+                        self.offset_Xb = pos_open
                         self.offset_Xb_changed = True
                 else:
                     self.offset_Xa_changed = False
             else:
                 if (abs(self.offset_Xb - pos_closed_2) >
                         round(abs(2 * step) / self.motors.cfg.x_sf, 0)):
-                    self.offset_Xb = pos_closed_2
+                    self.offset_Xb = pos_open
                     self.offset_Xb_changed = True
                     if self.last_motor == 0:
                         # Updates both offsets at first iteration
-                        self.offset_Xa = pos_closed_2
+                        self.offset_Xa = pos_open
                         self.offset_Xa_changed = True
                 else:
                     self.offset_Xb_changed = False
@@ -416,8 +427,10 @@ class FiducialDialog(_QDialog):
         try:
             device_pos = round(
                 self.ui.dsb_dev_pos.value()/self.motors.cfg.x_sf, 0)
-            offset_xa = int(offset_xa - device_pos)
-            offset_xb = int(offset_xb - device_pos)
+            wire_radius = 0.05/self.motors.cfg.x_sf  # from mm to enc counts
+            offset_xa = -1 * int(offset_xa - (device_pos - wire_radius))
+            offset_xb = -1 * int(offset_xb - (device_pos - wire_radius))
+            _ppmac.write('#1,3k')
             _ppmac.set_motor_param(1, 'CompPos', offset_xa)
             _ppmac.set_motor_param(3, 'CompPos', offset_xb)
             self.save_offsets(offset_xa, offset_xb)

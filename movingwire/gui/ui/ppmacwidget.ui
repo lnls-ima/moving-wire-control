@@ -512,19 +512,20 @@
        <layout class="QGridLayout" name="gridLayout_5">
         <item row="0" column="0">
          <layout class="QGridLayout" name="gridLayout_3">
-          <item row="1" column="3">
-           <widget class="QCheckBox" name="chb_homed_y">
-            <property name="enabled">
-             <bool>false</bool>
-            </property>
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_8">
             <property name="text">
-             <string>Y Homed</string>
+             <string>Mode:</string>
             </property>
-            <property name="checkable">
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QRadioButton" name="rdb_inc_xy">
+            <property name="enabled">
              <bool>true</bool>
             </property>
-            <property name="tristate">
-             <bool>false</bool>
+            <property name="text">
+             <string>Incremental</string>
             </property>
            </widget>
           </item>
@@ -541,6 +542,29 @@
             </property>
            </widget>
           </item>
+          <item row="0" column="2">
+           <widget class="QDoubleSpinBox" name="dsb_pos_x">
+            <property name="decimals">
+             <number>3</number>
+            </property>
+            <property name="minimum">
+             <double>-999999.000000000000000</double>
+            </property>
+            <property name="maximum">
+             <double>999999.000000000000000</double>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QRadioButton" name="rdb_abs_xy">
+            <property name="text">
+             <string>Absolute</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
           <item row="0" column="1">
            <widget class="QLabel" name="label_4">
             <property name="text">
@@ -548,10 +572,47 @@
             </property>
            </widget>
           </item>
+          <item row="0" column="4">
+           <widget class="QPushButton" name="pbt_home_x">
+            <property name="text">
+             <string>Home X</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="3">
+           <widget class="QPushButton" name="pbt_move_x">
+            <property name="text">
+             <string>Move X</string>
+            </property>
+           </widget>
+          </item>
           <item row="2" column="2">
            <widget class="QPushButton" name="pbt_move_xy">
             <property name="text">
              <string>Move XY</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="4">
+           <widget class="QPushButton" name="pbt_move_y">
+            <property name="text">
+             <string>Move Y</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="3">
+           <widget class="QCheckBox" name="chb_homed_y">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>Y Homed</string>
+            </property>
+            <property name="checkable">
+             <bool>true</bool>
+            </property>
+            <property name="tristate">
+             <bool>false</bool>
             </property>
            </widget>
           </item>
@@ -571,60 +632,6 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="1">
-           <widget class="QLabel" name="label_6">
-            <property name="text">
-             <string>Y Position [mm]:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="2">
-           <widget class="QDoubleSpinBox" name="dsb_pos_x">
-            <property name="decimals">
-             <number>3</number>
-            </property>
-            <property name="minimum">
-             <double>-999999.000000000000000</double>
-            </property>
-            <property name="maximum">
-             <double>999999.000000000000000</double>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_8">
-            <property name="text">
-             <string>Mode:</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QRadioButton" name="rdb_abs_xy">
-            <property name="text">
-             <string>Absolute</string>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0">
-           <widget class="QRadioButton" name="rdb_inc_xy">
-            <property name="enabled">
-             <bool>true</bool>
-            </property>
-            <property name="text">
-             <string>Incremental</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="4">
-           <widget class="QPushButton" name="pbt_home_x">
-            <property name="text">
-             <string>Home X</string>
-            </property>
-           </widget>
-          </item>
           <item row="1" column="4">
            <widget class="QPushButton" name="pbt_home_y">
             <property name="text">
@@ -632,17 +639,24 @@
             </property>
            </widget>
           </item>
-          <item row="2" column="3">
-           <widget class="QPushButton" name="pbt_move_x">
+          <item row="1" column="1">
+           <widget class="QLabel" name="label_6">
             <property name="text">
-             <string>Move X</string>
+             <string>Y Position [mm]:</string>
             </property>
            </widget>
           </item>
-          <item row="2" column="4">
-           <widget class="QPushButton" name="pbt_move_y">
+          <item row="3" column="2">
+           <widget class="QPushButton" name="pbt_mount_neg_lim">
             <property name="text">
-             <string>Move Y</string>
+             <string>Mount -</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="3">
+           <widget class="QPushButton" name="pbt_mount_pos_lim">
+            <property name="text">
+             <string>Mount +</string>
             </property>
            </widget>
           </item>
@@ -1106,6 +1120,13 @@
         </size>
        </property>
       </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pbt_clear_faults">
+       <property name="text">
+        <string>Clear Faults</string>
+       </property>
+      </widget>
      </item>
      <item>
       <widget class="QPushButton" name="pbt_stop_motors">

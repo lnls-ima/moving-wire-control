@@ -180,6 +180,7 @@ class Ppmac(Ppmac_eth):
                            8: 'BlSize',
                            9: 'BlSlewRate',
                            10: 'HomeOffset',
+                           11: 'AmpFaultLevel',
                            }
 
     def motor_stopped(self, motor):
@@ -332,7 +333,31 @@ class Ppmac(Ppmac_eth):
             else:
                 return False
         except Exception:
-            _traceback.print_exc(file=_sys.stdout)
+            # _traceback.print_exc(file=_sys.stdout)
+            print('motor_fault failure in devices. Motor {0}'.format(motor))
+            return None
+
+    def clear_motor_fault(self, motor):
+        """Clears motor amplifier faults.
+
+        Args:
+            motor (int): motor number (Xa=1, Ya=2, Xb=3, Yb=4, Ra=5, Rb=6);
+        Returns:
+            True if the amplifier fault was cleared;
+            False otherwise.
+        """
+        try:
+            self.set_motor_param(motor, self.motor_vars[11], 1)
+            _sleep(0.5)
+            _ans = int(self.query_motor_param(motor, self.motor_vars[11]))
+            if _ans == 1:
+                return True
+            else:
+                return False
+        except Exception:
+            # _traceback.print_exc(file=_sys.stdout)
+            print('clear_motor_fault failure in devices. '
+                  'Motor {0}'.format(motor))
             return None
 
     def motor_limits(self, motor):
@@ -351,7 +376,8 @@ class Ppmac(Ppmac_eth):
             else:
                 return False
         except Exception:
-            _traceback.print_exc(file=_sys.stdout)
+            # _traceback.print_exc(file=_sys.stdout)
+            print('motor_limits failure in devices. Motor {0}'.format(motor))
             return None
 
     def enable_motors(self, motors=[]):
@@ -374,7 +400,8 @@ class Ppmac(Ppmac_eth):
             self.write('#{0}j/'.format(enable))
             return True
         except Exception:
-            _traceback.print_exc(file=_sys.stdout)
+            # _traceback.print_exc(file=_sys.stdout)
+            print('enable_motors failure in devices.')
             return False
 
     def set_motor_pos(self, motor, position):

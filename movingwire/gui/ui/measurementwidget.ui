@@ -65,7 +65,7 @@
      <item>
       <widget class="QPushButton" name="pbt_map">
        <property name="text">
-        <string>Integrals Map</string>
+        <string>Integral Maps</string>
        </property>
       </widget>
      </item>

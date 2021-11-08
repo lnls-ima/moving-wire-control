@@ -106,6 +106,9 @@ class PpmacWidget(_QWidget):
         self.ui.pbt_move_y.clicked.connect(self.move_y_ui)
         self.ui.pbt_stop_motors.clicked.connect(self.stop_motors)
         self.ui.pbt_fiducialization.clicked.connect(self.fiducial_dialog)
+        self.ui.pbt_mount_neg_lim.clicked.connect(self.mount_neg_lim)
+        self.ui.pbt_mount_pos_lim.clicked.connect(self.mount_pos_lim)
+        self.ui.pbt_clear_faults.clicked.connect(self.clear_faults)
 
     def update_position(self):
         """Updates position displays on ui."""
@@ -127,14 +130,16 @@ class PpmacWidget(_QWidget):
                     # self.ui.lcd_pos6.display(self.pos[5]*self.angular_sf)
                     _QApplication.processEvents()
         except Exception:
-            _traceback.print_exc(file=_sys.stdout)
+            # _traceback.print_exc(file=_sys.stdout)
+            print('update_position failure in ppmacwidget.')
 
     def update_cfg_list(self):
         """Updates configuration name list in combobox."""
         try:
             _update_db_name_list(self.cfg, self.ui.cmb_cfg_name)
         except Exception:
-            _traceback.print_exc(file=_sys.stdout)
+            # _traceback.print_exc(file=_sys.stdout)
+            print('update_cfg_list failure in ppmacwidget.')
 
     def update_cfg_from_ui(self):
         """Updates current measurement configuration from ui widgets.
@@ -326,6 +331,7 @@ class PpmacWidget(_QWidget):
             else:
                 _ts_y = 0
 
+            self.update_flag = False
             self.timer.stop()
             _sleep(0.2)
             # Configures rotation motors:
@@ -373,9 +379,12 @@ class PpmacWidget(_QWidget):
             _QMessageBox.information(self, 'Information',
                                      'PPMAC configured.',
                                      _QMessageBox.Ok)
+            self.update_flag = True
             self.timer.start(1000)
         except Exception:
-            _traceback.print_exc(file=_sys.stdout)
+            # _traceback.print_exc(file=_sys.stdout)
+            print('configure_ppmac failure in ppmacwidget.')
+            self.update_flag = True
             self.timer.start(1000)
 
     def home(self):
@@ -385,6 +394,7 @@ class PpmacWidget(_QWidget):
             True if successfull;
             False otherwise."""
         try:
+            self.update_flag = False
             self.timer.stop()
             _home5 = self.cfg.home_offset5
             _home6 = self.cfg.home_offset6
@@ -401,11 +411,14 @@ class PpmacWidget(_QWidget):
                 _sleep(1)
             self.ppmac.remove_backlash(0)
 #             self.ui.chb_homed.setChecked(True)
+            self.update_flag = True
             self.timer.start(1000)
             return True
         except Exception:
             self.ui.chb_homed.setChecked(False)
-            _traceback.print_exc(file=_sys.stdout)
+            # _traceback.print_exc(file=_sys.stdout)
+            print('home failure in ppmacwidget.')
+            self.update_flag = True
             self.timer.start(1000)
             return False
 
@@ -430,6 +443,7 @@ class PpmacWidget(_QWidget):
             self.ui.pbt_fiducialization.setEnabled(False)
             self.parent_window.ui.twg_main.setTabEnabled(3, False)
             _QApplication.processEvents()
+            self.update_flag = False
             self.timer.stop()
             _sleep(0.5)
 
@@ -454,8 +468,10 @@ class PpmacWidget(_QWidget):
 
             # Sets fiducialization parameters again:
             self.load_fiduc_cfg()
+            _ppmac.write('#1..3k')
             _ppmac.set_motor_param(1, 'CompPos', self.fiduc_cfg.offset_xa)
             _ppmac.set_motor_param(3, 'CompPos', self.fiduc_cfg.offset_xb)
+            _ppmac.write('#1,3j/')
 
             self.move_x(0)
 
@@ -480,7 +496,9 @@ class PpmacWidget(_QWidget):
             self.ui.pbt_fiducialization.setEnabled(True)
             self.parent_window.ui.twg_main.setTabEnabled(3, True)
 
-            _traceback.print_exc(file=_sys.stdout)
+            # _traceback.print_exc(file=_sys.stdout)
+            print('home_x failure in ppmacwidget.')
+            self.update_flag = True
             self.timer.start(1000)
             _QMessageBox.warning(self, 'Warning',
                                  'X homing failed.',
@@ -506,6 +524,7 @@ class PpmacWidget(_QWidget):
             self.ui.groupBox_3.setEnabled(False)
             self.ui.pbt_configure.setEnabled(False)
             self.ui.pbt_fiducialization.setEnabled(False)
+            self.update_flag = False
             self.timer.stop()
             _sleep(0.5)
 
@@ -513,6 +532,7 @@ class PpmacWidget(_QWidget):
             self.move_y(-15)
 
             # move_y enables timer again
+            self.update_flag = False
             self.timer.stop()
             _sleep(0.5)
 
@@ -550,7 +570,9 @@ class PpmacWidget(_QWidget):
             self.ui.pbt_configure.setEnabled(True)
             self.ui.pbt_fiducialization.setEnabled(True)
 
-            _traceback.print_exc(file=_sys.stdout)
+            # _traceback.print_exc(file=_sys.stdout)
+            print('home_y failure in ppmacwidget.')
+            self.update_flag = True
             self.timer.start(1000)
             _QMessageBox.warning(self, 'Warning',
                                  'Y homing failed.',
@@ -566,14 +588,18 @@ class PpmacWidget(_QWidget):
             else:
                 _mode = '^'
 #             with _ppmac.lock_ppmac:
+            self.update_flag = False
             self.timer.stop()
             _ppmac.write('#5j' + _mode + str(_steps[0]) +
                          ';#6j' + _mode + str(_steps[1]))
             _sleep(0.1)
             _ppmac.read()
+            self.update_flag = True
             self.timer.start(1000)
         except Exception:
-            _traceback.print_exc(file=_sys.stdout)
+            # _traceback.print_exc(file=_sys.stdout)
+            print('move failure in ppmacwidget.')
+            self.update_flag = True
             self.timer.start(1000)
 
     def move_x(self, position, absolute=True, motor=None):
@@ -589,13 +615,13 @@ class PpmacWidget(_QWidget):
             True if successfull;
             False otherwise."""
         try:
-            _x_lim = [self.ui.dsb_min_x.value(),
-                      self.ui.dsb_max_x.value()]  # [mm]
-            _pos_x = position - self.cfg.x_offset  # [mm] *10**-3/self.cfg.x_sf
+            _x_lim = [self.ui.dsb_min_x.value() + self.cfg.x_offset,
+                      self.ui.dsb_max_x.value() + self.cfg.x_offset]  # [mm]
+            _pos_x = position + self.cfg.x_offset  # [mm] *10**-3/self.cfg.x_sf
             _status = False
 
             if _x_lim[0] <= _pos_x <= _x_lim[1]:
-                _pos_x = _pos_x/self.cfg.x_sf
+                _pos_x = int(_pos_x/self.cfg.x_sf)
             else:
                 _QMessageBox.warning(self, 'Information',
                                      'X position out of range.',
@@ -607,11 +633,14 @@ class PpmacWidget(_QWidget):
             else:
                 _mode = '^'
 
+            self.update_flag = False
             self.timer.stop()
             # _sleep(0.2)
 
+            print('X position: {0}'.format(_pos_x))
+
             if not (motor in [1, 3]):
-                _ppmac.write('#2,4k')
+                _ppmac.write('#2,4,5,6k')
                 _ppmac.write('#1,3j/')
                 _msg_x = '#1,3j' + _mode + str(_pos_x)
                 _ppmac.write(_msg_x)
@@ -628,7 +657,7 @@ class PpmacWidget(_QWidget):
                     _status = True
 
             else:
-                _ppmac.write('#2,4k')
+                _ppmac.write('#2,4,5,6k')
                 _ppmac.write('#{0}j/'.format(motor))
                 _msg_x = '#{0}j'.format(motor) + _mode + str(_pos_x)
                 _ppmac.write(_msg_x)
@@ -641,15 +670,19 @@ class PpmacWidget(_QWidget):
                     _status = True
 
             if _status:
+                self.update_flag = True
                 self.timer.start(1000)
                 return True
             else:
                 print('X motor faulted or limit switch active.')
+                self.update_flag = True
                 self.timer.start(1000)
                 return False
 
         except Exception:
-            _traceback.print_exc(file=_sys.stdout)
+            # _traceback.print_exc(file=_sys.stdout)
+            print('move_x failure in ppmacwidget.')
+            self.update_flag = True
             self.timer.start(1000)
             return False
 
@@ -667,9 +700,9 @@ class PpmacWidget(_QWidget):
             True if successfull;
             False otherwise."""
         try:
-            _y_lim = [self.ui.dsb_min_y.value(),
-                      self.ui.dsb_max_y.value()]  # [mm]
-            _pos_y = position - self.cfg.x_offset  # [mm]
+            _y_lim = [self.ui.dsb_min_y.value() + self.cfg.y_offset,
+                      self.ui.dsb_max_y.value() + self.cfg.y_offset]  # [mm]
+            _pos_y = position + self.cfg.y_offset  # [mm]
             _status = False
             _limit_error = False
 
@@ -687,7 +720,7 @@ class PpmacWidget(_QWidget):
                     _limit_error = True
             else:
                 _target_y_pos = _present_y_pos + _pos_y  # [encoder counts]
-                _y_steps = _np.ones(2)*_pos_y*self.cfg.y_stps_per_cnt
+                _y_steps = _np.ones(2) * (_pos_y*self.cfg.y_stps_per_cnt)
                 for target in _target_y_pos:
                     if not (_y_lim[0] <= target*self.cfg.y_sf <= _y_lim[1]):
                         _limit_error = True
@@ -698,11 +731,14 @@ class PpmacWidget(_QWidget):
                                          _QMessageBox.Ok)
                     return False
 
+            self.update_flag = False
             self.timer.stop()
-            # _sleep(0.2)
+            # _sleep(0.4)
+
+            print('Y steps: {0}'.format(_y_steps))
 
             if not (motor in [2, 4]):
-                _ppmac.write('#1,3k')
+                _ppmac.write('#1,3,5,6k')
                 _ppmac.write('#2,4j/')
                 _msg_y = '#2j{0}{1};#4j{0}{2}'.format(_mode, int(_y_steps[0]),
                                                       int(_y_steps[1]))
@@ -738,7 +774,7 @@ class PpmacWidget(_QWidget):
                     if isinstance(_target_y_pos, _np.ndarray):
                         _target_y_pos = _target_y_pos[1]
 
-                _ppmac.write('#1,3k')
+                _ppmac.write('#1,3,5,6k')
                 _ppmac.write('#{0}j/'.format(motor))
                 _msg_y = '#{0}j{1}{2}'.format(motor, _mode, _y_steps)
                 _ppmac.write(_msg_y)
@@ -757,15 +793,19 @@ class PpmacWidget(_QWidget):
                     _status = True
 
             if _status:
+                self.update_flag = True
                 self.timer.start(1000)
                 return True
             else:
                 print('Y motor faulted or limit switch active.')
+                self.update_flag = True
                 self.timer.start(1000)
                 return False
 
         except Exception:
-            _traceback.print_exc(file=_sys.stdout)
+            #_traceback.print_exc(file=_sys.stdout)
+            print('move_y failure in ppmacwidget.')
+            self.update_flag = True
             self.timer.start(1000)
             return False
 
@@ -785,12 +825,15 @@ class PpmacWidget(_QWidget):
 
             return True
         except Exception:
-            _traceback.print_exc(file=_sys.stdout)
+            #_traceback.print_exc(file=_sys.stdout)
+            print('move_xy failure in ppmacwidget.')
             # self.timer.start(1000)
             return False
 
     def move_x_ui(self):
         """Move X axis from UI."""
+        self.update_flag = False
+        _sleep(0.4)
         position = self.ui.dsb_pos_x.value()
         if self.ui.rdb_abs_xy.isChecked():
             absolute = True
@@ -800,6 +843,8 @@ class PpmacWidget(_QWidget):
 
     def move_y_ui(self):
         """Move Y axis from UI."""
+        self.update_flag = False
+        _sleep(0.4)
         position = self.ui.dsb_pos_y.value()
         if self.ui.rdb_abs_xy.isChecked():
             absolute = True
@@ -807,15 +852,109 @@ class PpmacWidget(_QWidget):
             absolute = False
         self.move_y(position, absolute)
 
+    def mount_neg_lim(self):
+        """Moves X motors close to negative limit switches."""
+        _ans = _QMessageBox.question(self, 'Attention', 'Do you want to '
+                                     'move the stages to the negative '
+                                     'limit switches? This will override '
+                                     'software limits.',
+                                     _QMessageBox.Yes |
+                                     _QMessageBox.No,
+                                     _QMessageBox.No)
+        if _ans == _QMessageBox.No:
+            return False
+
+        xa_min = -62
+        xb_min = -57.5
+
+        if self.move_y(0):
+            if self.move_x(xb_min):
+                if self.move_x(xa_min, motor=1):
+                    return True
+
+        else:
+            if self.move_y(0):
+                if self.move_x(xb_min):
+                    if self.move_x(xa_min, motor=1):
+                        return True
+
+        _QMessageBox.warning(self, 'Warning', 'Failed to move stages to '
+                             'negative mounting position.')
+        return False
+
+    def mount_pos_lim(self):
+        """Moves X motors close to positive limit switches."""
+        _ans = _QMessageBox.question(self, 'Attention', 'Do you want to '
+                                     'move the stages to the positive '
+                                     'limit switches? This will override '
+                                     'software limits.',
+                                     _QMessageBox.Yes |
+                                     _QMessageBox.No,
+                                     _QMessageBox.No)
+        if _ans == _QMessageBox.No:
+            return False
+
+        xa_max = 39.6
+        xb_max = 44.1
+
+        ya_min = -9.7
+        yb_min = -6.7
+
+        # ya_max = 29.8
+        # yb_max = 33
+
+        if self.move_y(0):
+            if self.move_x(xa_max):
+                if self.move_x(xb_max, motor=3):
+                    if self.move_y(yb_min):
+                        if self.move_y(ya_min, motor=2):
+                            return True
+        else:
+            if self.move_y(0):
+                if self.move_x(xa_max):
+                    if self.move_x(xb_max, motor=3):
+                        if self.move_y(yb_min):
+                            if self.move_y(ya_min, motor=2):
+                                return True
+
+        _QMessageBox.warning(self, 'Warning', 'Failed to move stages to '
+                             'positive mounting position.')
+        return False
+
+    def clear_faults(self):
+        """Clears all motor amplifier faults."""
+        try:
+            self.update_flag = False
+            self.timer.stop()
+            _sleep(0.2)
+            _ppmac.clear_motor_fault(1)
+            _ppmac.clear_motor_fault(2)
+            _ppmac.clear_motor_fault(3)
+            _ppmac.clear_motor_fault(4)
+            _sleep(0.2)
+            self.update_flag = True
+            self.timer.start(1000)
+        except Exception:
+            self.update_flag = True
+            self.timer.start(1000)
+            # _traceback.print_exc(file=_sys.stdout)
+            print('claer_faults failure in ppmacwidget.')
+
     def stop_motors(self):
         """Stops and disables all motors."""
         try:
+            self.update_flag = False
             self.timer.stop()
+            _sleep(0.2)
             _ppmac.stop_motors()
+            _sleep(0.2)
+            self.update_flag = True
             self.timer.start(1000)
         except Exception:
+            self.update_flag = True
             self.timer.start(1000)
-            _traceback.print_exc(file=_sys.stdout)
+            # _traceback.print_exc(file=_sys.stdout)
+            print('stop_motors failure in ppmacwidget.')
 
     def fiducial_dialog(self):
         self.update_flag = False
