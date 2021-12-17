@@ -7,10 +7,10 @@ import sys as _sys
 import threading as _threading
 from qtpy.QtWidgets import QApplication as _QApplication
 
-from ueipac.gui import utils as _utils 
-from ueipac.gui.ueipacwindow import (
+from ueipaccontrol.ueipac.gui import utils as _utils 
+from ueipaccontrol.ueipac.gui.ueipacwindow import (
     UeipacWindow as _UeipacWindow)
-import ueipac.data as _data
+import ueipaccontrol.ueipac.data as _data
 #from ueipac.devices import 
 
 
@@ -53,13 +53,13 @@ class GUIThread(_threading.Thread):
     def run(self):
         """Thread target function."""
         self.app = None
-        if not _QApplication.instance():
-            self.app = UeipacApp([])
-            self.window = _UeipacWindow(
-                width=_utils.WINDOW_WIDTH, height=_utils.WINDOW_HEIGHT)
-            self.window.show()
-            self.window.centralize_window()
-            _sys.exit(self.app.exec_())
+        # if not _QApplication.instance():
+        self.app = UeipacApp([])
+        self.window = _UeipacWindow(
+            width=_utils.WINDOW_WIDTH, height=_utils.WINDOW_HEIGHT)
+        self.window.show()
+        self.window.centralize_window()
+        _sys.exit(self.app.exec_())
 
 
 def run():

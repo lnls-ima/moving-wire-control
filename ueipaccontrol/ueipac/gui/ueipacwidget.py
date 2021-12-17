@@ -20,8 +20,8 @@ from qtpy.QtWidgets import (
 from qtpy.QtCore import Qt as _Qt
 import qtpy.uic as _uic
 
-import ueipac.data as _data
-from ueipac.gui.utils import (
+import ueipaccontrol.ueipac.data as _data
+from ueipaccontrol.ueipac.gui.utils import (
     get_ui_file as _get_ui_file,
     sleep as _sleep,
     update_db_name_list as _update_db_name_list,
@@ -128,7 +128,7 @@ class UEIPACWidget(_QWidget):
         try: 
             self.user = 'root'
             self.password = 'root'
-            ip = '10.0.28.246'
+            ip = '10.128.44.124'
             port = 22
             self.ssh = _paramiko.SSHClient()
             self.ssh.load_system_host_keys()

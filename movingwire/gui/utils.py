@@ -9,6 +9,7 @@ import time as _time
 import sqlite3 as _sqlite3
 import os.path as _path
 import traceback as _traceback
+import json as _json
 # import pyqtgraph as _pyqtgraph
 from qtpy.QtGui import (
     QFont as _QFont,
@@ -345,3 +346,9 @@ def pandas_load_db_maps():
     maps = _pd.read_sql('SELECT * from integral_maps', con)
     con.close()
     return maps
+
+
+def json_to_array(value):
+    """Returns a numpy array from a json entry."""
+    array = _np.array(_json.loads(value))
+    return array

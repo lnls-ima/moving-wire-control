@@ -470,6 +470,13 @@ Motors</string>
         </rect>
        </property>
        <layout class="QGridLayout" name="gridLayout_3">
+        <item row="3" column="0">
+         <widget class="QPushButton" name="pbt_multipoles">
+          <property name="text">
+           <string>Multipoles</string>
+          </property>
+         </widget>
+        </item>
         <item row="0" column="0">
          <layout class="QHBoxLayout" name="horizontalLayout_5">
           <item>

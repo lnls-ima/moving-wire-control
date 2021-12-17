@@ -404,6 +404,20 @@ class MeasurementWidget(_QWidget):
 
         try:
             self.update_cfg_from_ui()
+
+            if not self.motors.check_homed():
+                _ans = _QMessageBox.question(self, 'Warning', 'The system axes'
+                                             ' are not homed. The positions '
+                                             'are not referenced and this '
+                                             'might also damage the stretched '
+                                             'wire. Would you like to '
+                                             'continue anyway?',
+                                             _QMessageBox.Yes |
+                                             _QMessageBox.No,
+                                             _QMessageBox.No)
+                if _ans == _QMessageBox.No:
+                    return False
+
             _ppmac.flag_abort = False
             if self.ui.rdb_sw.isChecked():
                 _meas = self.meas_sw
@@ -712,7 +726,7 @@ class MeasurementWidget(_QWidget):
                     moving_motor = 4  # '4'
                     # static_motor = 2  # '2'
 
-            self.motors.configure_ppmac()
+            #self.motors.configure_ppmac()
 
             _meas.speed = speed
             _meas.accel = accel
@@ -1241,6 +1255,21 @@ class MeasurementWidget(_QWidget):
             nplc = self.ui.dsb_nplc.value()
             mrange = self.ui.cmb_range.currentIndex()
 
+            _ppmac.flag_abort = False
+
+            if not self.motors.check_homed():
+                _ans = _QMessageBox.question(self, 'Warning', 'The system axes'
+                                             ' are not homed. The positions '
+                                             'are not referenced and this '
+                                             'might also damage the stretched '
+                                             'wire. Would you like to '
+                                             'continue anyway?',
+                                             _QMessageBox.Yes |
+                                             _QMessageBox.No,
+                                             _QMessageBox.No)
+                if _ans == _QMessageBox.No:
+                    return False
+
             if _cfg.I1:
                 self.meas_sw.db_update_database(self.database_name,
                                                 mongo=self.mongo,
@@ -1426,6 +1455,12 @@ class MeasurementWidget(_QWidget):
                             _meas_I1x.end_pos = y_final_pos
                             _meas_I1x.move_axis = move_axis
                             for _ in range(_cfg.repetitions):
+                                if _ppmac.flag_abort:
+                                    _QMessageBox.information(self, 'Warning',
+                                                             'Measurement '
+                                                             'Aborted.',
+                                                             _QMessageBox.Ok)
+                                    return False
                                 self.map_measurement(_meas_I1x)
                         if _cfg.I2:
                             _meas_I2x.x_pos = x
@@ -1437,6 +1472,12 @@ class MeasurementWidget(_QWidget):
                             move_axis(y)
                             move_axis(y)
                             for _ in range(_cfg.repetitions):
+                                if _ppmac.flag_abort:
+                                    _QMessageBox.information(self, 'Warning',
+                                                             'Measurement '
+                                                             'Aborted.',
+                                                             _QMessageBox.Ok)
+                                    return False
                                 self.map_measurement(_meas_I2x, I2=True)
 
                     if _cfg.Iy:
@@ -1452,6 +1493,12 @@ class MeasurementWidget(_QWidget):
                             _meas_I1y.end_pos = x_final_pos
                             _meas_I1y.move_axis = move_axis
                             for _ in range(_cfg.repetitions):
+                                if _ppmac.flag_abort:
+                                    _QMessageBox.information(self, 'Warning',
+                                                             'Measurement '
+                                                             'Aborted.',
+                                                             _QMessageBox.Ok)
+                                    return False
                                 self.map_measurement(_meas_I1y)
                         if _cfg.I2:
                             _meas_I2y.x_pos = x
@@ -1462,6 +1509,12 @@ class MeasurementWidget(_QWidget):
                             _meas_I2y.moving_motor = 1  # CHECK WHICH ONE IS THE BEST
                             move_axis(x)
                             for _ in range(_cfg.repetitions):
+                                if _ppmac.flag_abort:
+                                    _QMessageBox.warning(self, 'Warning',
+                                                         'Measurement '
+                                                         'Aborted.',
+                                                         _QMessageBox.Ok)
+                                    return False
                                 self.map_measurement(_meas_I2y, I2=True)
 
             if _cfg.I1:
@@ -1552,10 +1605,12 @@ class MeasurementWidget(_QWidget):
                     raise RuntimeError('Measurement aborted after 3 '
                                        'consecutive moving errors.')
 
-                if _prg_dialog.wasCanceled():
+                if _prg_dialog.wasCanceled() or _ppmac.flag_abort:
                     _prg_dialog.destroy()
                     _ppmac.flag_abort = True
                     raise RuntimeError('Measurement aborted.')
+                    _QMessageBox.warning(self, 'Warning',
+                                         'Measurement aborted.')
 
                 # Forward measurement
                 _volt.start_measurement()
@@ -1588,10 +1643,12 @@ class MeasurementWidget(_QWidget):
                 _data_frw = _volt.get_readings_from_memory(5)[::-1]
                 # print(_t)
 
-                if _prg_dialog.wasCanceled():
+                if _prg_dialog.wasCanceled() or _ppmac.flag_abort:
                     _prg_dialog.destroy()
                     _ppmac.flag_abort = True
                     raise RuntimeError('Measurement aborted.')
+                    _QMessageBox.warning(self, 'Warning',
+                                         'Measurement aborted.')
 
                 # comment to minimize  temperature difference
                 # _sleep(3)

@@ -19,6 +19,8 @@ import qtpy.uic as _uic
 
 from movingwire.gui.fiducialdialog import FiducialDialog \
     as _FiducialDialog
+from ueipaccontrol.ueipac.gui import ueipacapp \
+    as _ueipacapp
 
 from movingwire.gui.utils import (
     get_ui_file as _get_ui_file,
@@ -109,6 +111,19 @@ class PpmacWidget(_QWidget):
         self.ui.pbt_mount_neg_lim.clicked.connect(self.mount_neg_lim)
         self.ui.pbt_mount_pos_lim.clicked.connect(self.mount_pos_lim)
         self.ui.pbt_clear_faults.clicked.connect(self.clear_faults)
+        self.ui.pbt_wire_tension.clicked.connect(self.wire_tension_dialog)
+
+    def enable_moving_buttons(self, state=True):
+        self.ui.pbt_move_xy.setEnabled(state)
+        self.ui.pbt_home_x.setEnabled(state)
+        self.ui.pbt_home_y.setEnabled(state)
+        self.ui.pbt_configure.setEnabled(state)
+        self.ui.pbt_move_x.setEnabled(state)
+        self.ui.pbt_move_y.setEnabled(state)
+        self.ui.pbt_fiducialization.setEnabled(state)
+        self.ui.pbt_mount_neg_lim.setEnabled(state)
+        self.ui.pbt_mount_pos_lim.setEnabled(state)
+        self.ui.pbt_clear_faults.setEnabled(state)
 
     def update_position(self):
         """Updates position displays on ui."""
@@ -297,6 +312,7 @@ class PpmacWidget(_QWidget):
     def configure_ppmac(self):
         """Configures PPMAC motor parameters using ui values."""
         try:
+            self.enable_moving_buttons(False)
             self.update_cfg_from_ui()
 
             _spd = self.cfg.speed * self.steps_per_turn * 10**-3  # [turns/s]
@@ -331,6 +347,7 @@ class PpmacWidget(_QWidget):
             else:
                 _ts_y = 0
 
+            self.enable_moving_buttons(True)
             self.update_flag = False
             self.timer.stop()
             _sleep(0.2)
@@ -379,6 +396,10 @@ class PpmacWidget(_QWidget):
             _QMessageBox.information(self, 'Information',
                                      'PPMAC configured.',
                                      _QMessageBox.Ok)
+
+            # checks homing
+            self.check_homed()
+
             self.update_flag = True
             self.timer.start(1000)
         except Exception:
@@ -437,6 +458,7 @@ class PpmacWidget(_QWidget):
             if _ans == _QMessageBox.No:
                 return False
 
+            self.enable_moving_buttons(False)
             # self.ui.chb_homed_x.setCheckable(True)
             self.ui.groupBox_3.setEnabled(False)
             self.ui.pbt_configure.setEnabled(False)
@@ -482,6 +504,8 @@ class PpmacWidget(_QWidget):
             self.ui.pbt_configure.setEnabled(True)
             self.ui.pbt_fiducialization.setEnabled(True)
             self.parent_window.ui.twg_main.setTabEnabled(3, True)
+
+            self.enable_moving_buttons(True)
             # move_y enables timer, no need to start it again
             # self.timer.start(1000)
             _QMessageBox.information(self, 'Information',
@@ -520,6 +544,7 @@ class PpmacWidget(_QWidget):
             if _ans == _QMessageBox.No:
                 return False
 
+            self.enable_moving_buttons(False)
             # self.ui.chb_homed_y.setCheckable(True)
             self.ui.groupBox_3.setEnabled(False)
             self.ui.pbt_configure.setEnabled(False)
@@ -559,6 +584,8 @@ class PpmacWidget(_QWidget):
             self.ui.pbt_fiducialization.setEnabled(True)
             # move_y enables timer, no need to start it again
             # self.timer.start(1000)
+
+            self.enable_moving_buttons(True)
             _QMessageBox.information(self, 'Information',
                                      'Y homing complete.',
                                      _QMessageBox.Ok)
@@ -615,8 +642,8 @@ class PpmacWidget(_QWidget):
             True if successfull;
             False otherwise."""
         try:
-            _x_lim = [self.ui.dsb_min_x.value() + self.cfg.x_offset,
-                      self.ui.dsb_max_x.value() + self.cfg.x_offset]  # [mm]
+            _x_lim = [self.cfg.min_x + self.cfg.x_offset,
+                      self.cfg.max_x + self.cfg.x_offset]  # [mm]
             _pos_x = position + self.cfg.x_offset  # [mm] *10**-3/self.cfg.x_sf
             _status = False
 
@@ -653,7 +680,9 @@ class PpmacWidget(_QWidget):
                 if not any([_ppmac.motor_fault(1),
                             _ppmac.motor_fault(3),
                             _ppmac.motor_limits(1),
-                            _ppmac.motor_limits(3)]):
+                            _ppmac.motor_limits(3),
+                            _ppmac.motor_fefatal(1),
+                            _ppmac.motor_fefatal(3)]):
                     _status = True
 
             else:
@@ -700,8 +729,8 @@ class PpmacWidget(_QWidget):
             True if successfull;
             False otherwise."""
         try:
-            _y_lim = [self.ui.dsb_min_y.value() + self.cfg.y_offset,
-                      self.ui.dsb_max_y.value() + self.cfg.y_offset]  # [mm]
+            _y_lim = [self.cfg.min_y + self.cfg.y_offset,
+                      self.cfg.max_y + self.cfg.y_offset]  # [mm]
             _pos_y = position + self.cfg.y_offset  # [mm]
             _status = False
             _limit_error = False
@@ -812,6 +841,7 @@ class PpmacWidget(_QWidget):
     def move_xy(self):
         """Move X and Y motors."""
         try:
+            self.enable_moving_buttons(False)
             _pos_x = self.ui.dsb_pos_x.value()
             _pos_y = self.ui.dsb_pos_y.value()
 
@@ -823,103 +853,211 @@ class PpmacWidget(_QWidget):
             self.move_x(_pos_x, absolute=absolute)
             self.move_y(_pos_y, absolute=absolute)
 
+            self.enable_moving_buttons(True)
             return True
         except Exception:
             #_traceback.print_exc(file=_sys.stdout)
             print('move_xy failure in ppmacwidget.')
+            self.enable_moving_buttons(True)
             # self.timer.start(1000)
             return False
 
     def move_x_ui(self):
         """Move X axis from UI."""
+        if not self.check_x_homed():
+            _ans = _QMessageBox.question(self, 'Warning', 'The system axes'
+                                         ' are not homed. The positions '
+                                         'are not referenced and this '
+                                         'might also damage the stretched '
+                                         'wire. Would you like to '
+                                         'continue anyway?',
+                                         _QMessageBox.Yes |
+                                         _QMessageBox.No,
+                                         _QMessageBox.No)
+            if _ans == _QMessageBox.No:
+                return False
+
         self.update_flag = False
         _sleep(0.4)
+        self.enable_moving_buttons(False)
         position = self.ui.dsb_pos_x.value()
         if self.ui.rdb_abs_xy.isChecked():
             absolute = True
         else:
             absolute = False
         self.move_x(position, absolute)
+        self.enable_moving_buttons(True)
 
     def move_y_ui(self):
         """Move Y axis from UI."""
+        if not self.check_y_homed():
+            _ans = _QMessageBox.question(self, 'Warning', 'The system axes'
+                                         ' are not homed. The positions '
+                                         'are not referenced and this '
+                                         'might also damage the stretched '
+                                         'wire. Would you like to '
+                                         'continue anyway?',
+                                         _QMessageBox.Yes |
+                                         _QMessageBox.No,
+                                         _QMessageBox.No)
+            if _ans == _QMessageBox.No:
+                return False
+
         self.update_flag = False
         _sleep(0.4)
+        self.enable_moving_buttons(False)
         position = self.ui.dsb_pos_y.value()
         if self.ui.rdb_abs_xy.isChecked():
             absolute = True
         else:
             absolute = False
         self.move_y(position, absolute)
+        self.enable_moving_buttons(True)
 
     def mount_neg_lim(self):
         """Moves X motors close to negative limit switches."""
         _ans = _QMessageBox.question(self, 'Attention', 'Do you want to '
                                      'move the stages to the negative '
-                                     'limit switches? This will override '
-                                     'software limits.',
+                                     'limit switches? The software position '
+                                     'limits will be disconsidered.',
                                      _QMessageBox.Yes |
                                      _QMessageBox.No,
                                      _QMessageBox.No)
         if _ans == _QMessageBox.No:
             return False
 
+        if not self.check_homed():
+            _ans = _QMessageBox.question(self, 'Warning', 'The system axes'
+                                         ' are not homed. The positions '
+                                         'are not referenced and this '
+                                         'might also damage the stretched '
+                                         'wire. Would you like to '
+                                         'continue anyway?',
+                                         _QMessageBox.Yes |
+                                         _QMessageBox.No,
+                                         _QMessageBox.No)
+            if _ans == _QMessageBox.No:
+                return False
+
+        self.enable_moving_buttons(False)
         xa_min = -62
         xb_min = -57.5
 
+        _max_x = self.cfg.max_x
+        _min_x = self.cfg.min_x
+        _max_y = self.cfg.max_y
+        _min_y = self.cfg.min_y
+
+        self.cfg.max_x = 99999
+        self.cfg.min_x = -99999
+        self.cfg.max_y = 99999
+        self.cfg.min_y = -99999
+
+        _mnt_neg_flag = False
         if self.move_y(0):
             if self.move_x(xb_min):
                 if self.move_x(xa_min, motor=1):
-                    return True
+                    _mnt_neg_flag = True
 
         else:
             if self.move_y(0):
                 if self.move_x(xb_min):
                     if self.move_x(xa_min, motor=1):
-                        return True
+                        _mnt_neg_flag = True
 
-        _QMessageBox.warning(self, 'Warning', 'Failed to move stages to '
-                             'negative mounting position.')
-        return False
+        self.cfg.max_x = _max_x
+        self.cfg.min_x = _min_x
+        self.cfg.max_y = _max_y
+        self.cfg.min_y = _min_y
+
+        self.enable_moving_buttons(True)
+        if _mnt_neg_flag:
+            _QMessageBox.information(self, 'Information', 'Mount- routine '
+                                     'finished.')
+            return True
+
+        else:
+            _QMessageBox.warning(self, 'Warning', 'Failed to move stages to '
+                                 'negative mounting position. Try lowering '
+                                 'speed and acceleration.')
+            return False
 
     def mount_pos_lim(self):
         """Moves X motors close to positive limit switches."""
         _ans = _QMessageBox.question(self, 'Attention', 'Do you want to '
                                      'move the stages to the positive '
-                                     'limit switches? This will override '
-                                     'software limits.',
+                                     'limit switches? The software position '
+                                     'limits will be disconsidered.',
                                      _QMessageBox.Yes |
                                      _QMessageBox.No,
                                      _QMessageBox.No)
         if _ans == _QMessageBox.No:
             return False
 
+        if not self.check_homed():
+            _ans = _QMessageBox.question(self, 'Warning', 'The system axes'
+                                         ' are not homed. The positions '
+                                         'are not referenced and this '
+                                         'might also damage the stretched '
+                                         'wire. Would you like to '
+                                         'continue anyway?',
+                                         _QMessageBox.Yes |
+                                         _QMessageBox.No,
+                                         _QMessageBox.No)
+            if _ans == _QMessageBox.No:
+                return False
+
+        self.enable_moving_buttons(False)
         xa_max = 39.6
         xb_max = 44.1
 
         ya_min = -9.7
         yb_min = -6.7
 
+        _max_x = self.cfg.max_x
+        _min_x = self.cfg.min_x
+        _max_y = self.cfg.max_y
+        _min_y = self.cfg.min_y
+
+        self.cfg.max_x = 99999
+        self.cfg.min_x = -99999
+        self.cfg.max_y = 99999
+        self.cfg.min_y = -99999
+
         # ya_max = 29.8
         # yb_max = 33
 
+        _mnt_pos_flag = False
         if self.move_y(0):
             if self.move_x(xa_max):
                 if self.move_x(xb_max, motor=3):
                     if self.move_y(yb_min):
                         if self.move_y(ya_min, motor=2):
-                            return True
+                            _mnt_pos_flag = True
         else:
             if self.move_y(0):
                 if self.move_x(xa_max):
                     if self.move_x(xb_max, motor=3):
                         if self.move_y(yb_min):
                             if self.move_y(ya_min, motor=2):
-                                return True
+                                _mnt_pos_flag = True
 
-        _QMessageBox.warning(self, 'Warning', 'Failed to move stages to '
-                             'positive mounting position.')
-        return False
+        self.cfg.max_x = _max_x
+        self.cfg.min_x = _min_x
+        self.cfg.max_y = _max_y
+        self.cfg.min_y = _min_y
+
+        self.enable_moving_buttons(True)
+        if _mnt_pos_flag:
+            _QMessageBox.information(self, 'Information', 'Mount+ routine '
+                                     'finished.')
+            return True
+
+        else:
+            _QMessageBox.warning(self, 'Warning', 'Failed to move stages to '
+                                 'positive mounting position. Try lowering '
+                                 'speed and acceleration.')
+            return False
 
     def clear_faults(self):
         """Clears all motor amplifier faults."""
@@ -956,7 +1094,87 @@ class PpmacWidget(_QWidget):
             # _traceback.print_exc(file=_sys.stdout)
             print('stop_motors failure in ppmacwidget.')
 
+    def check_x_homed(self):
+        """Checks if X motors were homed.
+
+        Returns:
+            True if they were homed, False otherwise."""
+        try:
+            self.update_flag = False
+            self.timer.stop()
+            _sleep(0.2)
+            if all([_ppmac.motor_homed(1),
+                    _ppmac.motor_homed(3)]):
+                homed = True
+            else:
+                _QMessageBox.warning(self, 'Warning',
+                                     'X axis motors are not homed. Please '
+                                     'run the X homing routine.',
+                                     _QMessageBox.Ok)
+                homed = False
+            _sleep(0.2)
+            self.update_flag = True
+            self.timer.start(1000)
+            return homed
+        except Exception:
+            self.update_flag = True
+            self.timer.start(1000)
+            # _traceback.print_exc(file=_sys.stdout)
+            raise
+            print('check_x_homed failure in ppmacwidget.')
+            return False
+
+    def check_y_homed(self):
+        """Checks if Y motors were homed.
+
+        Returns:
+            True if they were homed, False otherwise."""
+        try:
+            self.update_flag = False
+            self.timer.stop()
+            _sleep(0.4)
+            if all([_ppmac.motor_homed(2),
+                    _ppmac.motor_homed(4)]):
+                homed = True
+            else:
+                _QMessageBox.warning(self, 'Warning',
+                                     'Y axis motors are not homed. Please '
+                                     'run the Y homing routine.',
+                                     _QMessageBox.Ok)
+                homed = False
+            _sleep(0.2)
+            self.update_flag = True
+            self.timer.start(1000)
+            return homed
+        except Exception:
+            self.update_flag = True
+            self.timer.start(1000)
+            # _traceback.print_exc(file=_sys.stdout)
+            raise
+            print('check_y_homed failure in ppmacwidget.')
+            return False
+
+    def check_homed(self):
+        """Checks if X and Y motors were homed.
+
+        Returns:
+            True if they were homed, False otherwise."""
+        try:
+            if all([self.check_x_homed(),
+                    self.check_y_homed()]):
+                return True
+            else:
+                return False
+        except Exception:
+            # _traceback.print_exc(file=_sys.stdout)
+            print('check_homed failure in ppmacwidget.')
+            return False
+
     def fiducial_dialog(self):
         self.update_flag = False
+        self.check_homed()
         self.fid_dialog = _FiducialDialog(self.parent_window.motors)
         self.fid_dialog.show()
+
+    def wire_tension_dialog(self):
+        self.ueipac_thread = _ueipacapp.run_in_thread()

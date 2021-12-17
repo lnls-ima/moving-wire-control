@@ -22,7 +22,8 @@ from movingwire.gui.utils import (
     sleep as _sleep,
     update_db_name_list as _update_db_name_list,
     pandas_load_db_measurements as _pandas_load_db_measurements,
-    pandas_load_db_maps as _pandas_load_db_maps
+    pandas_load_db_maps as _pandas_load_db_maps,
+    json_to_array as _json_to_array
     )
 
 from movingwire.gui.viewcfgwidget import ViewCfgWidget as _ViewCfgWidget
@@ -128,6 +129,7 @@ class AnalysisWidget(_QWidget):
         self.ui.cmb_transv_pos.currentIndexChanged.connect(self.plot_map)
         self.ui.cmb_hor.currentIndexChanged.connect(
             self.update_cmb_transv_pos)
+        self.ui.pbt_multipoles.clicked.connect(self.multipoles)
 
     def view_cfg(self):
         try:
@@ -526,7 +528,12 @@ class AnalysisWidget(_QWidget):
             meas.Ib = meas.I_b[_idx_f, :] - meas.I_b[_idx_0, :]
             meas.Ib_std = meas.Ib.std(ddof=1)
 
-            integrals = meas.I[_idx_f, :] - meas.I[_idx_0, :]
+            if meas.motion_axis == 'X':
+                _signal = 1
+            elif meas.motion_axis == 'Y':
+                _signal = -1
+
+            integrals = _signal*(meas.I[_idx_f, :] - meas.I[_idx_0, :])
             meas.max_integral_diff = integrals.max() - integrals.min()
 
             if not I2:
@@ -808,6 +815,78 @@ class AnalysisWidget(_QWidget):
         except Exception:
             _traceback.print_exc(file=_sys.stdout)
 
+    def load_map_df(self):
+        """Loads map and returns the pandas DataFrames (or None, if there's
+        no dataframe): map, I1x, I1y, I2x, I2y"""
+        try:
+            # loads data
+            _map_name = self.ui.cmb_map_name.currentText()
+            _hor_axis = self.ui.cmb_hor.currentText()
+            if _hor_axis != 'Meas #':
+                _transv_pos = float(self.ui.cmb_transv_pos.currentText())
+                if _hor_axis == 'X [mm]':
+                    _transv_axis = 'y_pos'
+                if _hor_axis == 'Y [mm]':
+                    _transv_axis = 'x_pos'
+
+            _maps = _pandas_load_db_maps()
+            _meas_I1, _meas_I2 = _pandas_load_db_measurements()
+
+            _map = _maps.loc[_maps['name'] == _map_name]
+
+            _repetitions = _map['repetitions'].iloc[-1]
+            if _repetitions == 1:
+                _ls = '-'
+            else:
+                _ls = ''
+
+            _I1_id0 = _map['I1_start_id'].values[0] - 1
+            _I1_idf = _map['I1_end_id'].values[0]
+            _I2_id0 = _map['I2_start_id'].values[0] - 1
+            _I2_idf = _map['I2_end_id'].values[0]
+
+            if _I1_idf != 0:
+                _I1 = _meas_I1.iloc[_I1_id0:_I1_idf]
+                if _hor_axis != 'Meas #':
+                    _I1x = _I1.loc[(_I1['motion_axis'] == 'Y') &
+                                   (_I1[_transv_axis] == _transv_pos)]
+                    _I1y = _I1.loc[(_I1['motion_axis'] == 'X') &
+                                   (_I1[_transv_axis] == _transv_pos)]
+                else:
+                    _I1x = _I1.loc[(_I1['motion_axis'] == 'Y')]
+                    _I1y = _I1.loc[(_I1['motion_axis'] == 'X')]
+                if len(_I1x) == 0:
+                    _I1x = None
+                if len(_I1y) == 0:
+                    _I1y = None
+            else:
+                _I1 = None
+                _I1x = None
+                _I1y = None
+
+            if _I2_idf != 0:
+                _I2 = _meas_I2.iloc[_I2_id0:_I2_idf]
+                if _hor_axis != 'Meas #':
+                    _I2x = _I2.loc[(_I2['motion_axis'] == 'Y') &
+                                   (_I2[_transv_axis] == _transv_pos)]
+                    _I2y = _I2.loc[(_I2['motion_axis'] == 'X') &
+                                   (_I2[_transv_axis] == _transv_pos)]
+                else:
+                    _I2x = _I2.loc[(_I2['motion_axis'] == 'Y')]
+                    _I2y = _I2.loc[(_I2['motion_axis'] == 'X')]
+                if len(_I2x) == 0:
+                    _I2x = None
+                if len(_I2y) == 0:
+                    _I2y = None
+            else:
+                _I2 = None
+                _I2x = None
+                _I2y = None
+
+            return _map, _I1x, _I1y, _I2x, _I2y
+        except Exception:
+            _traceback.print_exc(file=_sys.stdout)
+
     def plot_map(self):
         """Plots map data."""
         try:
@@ -948,7 +1027,8 @@ class AnalysisWidget(_QWidget):
 
     def save_map(self):
         """Saves current selected field integral map to file. If
-        repetitions > 1, saves last only measurement at each coordinate."""
+        repetitions > 1, saves the smaller error mesurement at each
+        coordinate."""
         # load data
         try:
             _map_name = self.ui.cmb_map_name.currentText()
@@ -1007,8 +1087,9 @@ class AnalysisWidget(_QWidget):
                     if _I1x is not None:
                         _I1x_item = _I1x.loc[(_I1x['x_pos'] == _x) &
                                              (_I1x['y_pos'] == _y)]
-                        _I1x_mean = _I1x_item['I1_mean'].iloc[-1]*10**6
-                        _I1x_std = _I1x_item['I1_std'].iloc[-1]*10**6
+                        _I1x_item = _I1x_item.sort_values('I1_std').drop_duplicates('x_pos')
+                        _I1x_mean = _I1x_item['I1_mean'].iloc[0]*10**6
+                        _I1x_std = _I1x_item['I1_std'].iloc[0]*10**6
                     else:
                         _I1x_mean = 0
                         _I1x_std = 0
@@ -1016,8 +1097,9 @@ class AnalysisWidget(_QWidget):
                     if _I1y is not None:
                         _I1y_item = _I1y.loc[(_I1y['x_pos'] == _x) &
                                              (_I1y['y_pos'] == _y)]
-                        _I1y_mean = _I1y_item['I1_mean'].iloc[-1]*10**6
-                        _I1y_std = _I1y_item['I1_std'].iloc[-1]*10**6
+                        _I1y_item = _I1y_item.sort_values('I1_std').drop_duplicates('x_pos')
+                        _I1y_mean = _I1y_item['I1_mean'].iloc[0]*10**6
+                        _I1y_std = _I1y_item['I1_std'].iloc[0]*10**6
                     else:
                         _I1y_mean = 0
                         _I1y_std = 0
@@ -1025,8 +1107,9 @@ class AnalysisWidget(_QWidget):
                     if _I2x is not None:
                         _I2x_item = _I2x.loc[(_I2x['x_pos'] == _x) &
                                              (_I2x['y_pos'] == _y)]
-                        _I2x_mean = _I2x_item['I2_mean'].iloc[-1]*10**5
-                        _I2x_std = _I2x_item['I2_std'].iloc[-1]*10**5
+                        _I2x_item = _I2x_item.sort_values('I2_std').drop_duplicates('x_pos')
+                        _I2x_mean = _I2x_item['I2_mean'].iloc[0]*10**5
+                        _I2x_std = _I2x_item['I2_std'].iloc[0]*10**5
                     else:
                         _I2x_mean = 0
                         _I2x_std = 0
@@ -1034,8 +1117,9 @@ class AnalysisWidget(_QWidget):
                     if _I2y is not None:
                         _I2y_item = _I2y.loc[(_I2y['x_pos'] == _x) &
                                              (_I2y['y_pos'] == _y)]
-                        _I2y_mean = _I2y_item['I2_mean'].iloc[-1]*10**5
-                        _I2y_std = _I2y_item['I2_std'].iloc[-1]*10**5
+                        _I2y_item = _I2y_item.sort_values('I2_std').drop_duplicates('x_pos')
+                        _I2y_mean = _I2y_item['I2_mean'].iloc[0]*10**5
+                        _I2y_std = _I2y_item['I2_std'].iloc[0]*10**5
                     else:
                         _I2y_mean = 0
                         _I2y_std = 0
@@ -1105,7 +1189,8 @@ class AnalysisWidget(_QWidget):
         """Updates field integral map data position and field integral arrays.
         If one of the integrals or components were not selected to be measured,
         their values will be set to zero.
-        If repetitions > 1, saves only the last measurement at each coordinate.
+        If repetitions > 1, saves the smaller error measurement at each
+        coordinate.
 
         Args:
             map_data (IntegralMaps): Integral maps database class to be
@@ -1114,6 +1199,15 @@ class AnalysisWidget(_QWidget):
             _meas_I1, _meas_I2 = _pandas_load_db_measurements()
 
             _map = map_data
+
+            _I1x_mean = _np.array([])
+            _I1x_std = _np.array([])
+            _I1y_mean = _np.array([])
+            _I1y_std = _np.array([])
+            _I2x_mean = _np.array([])
+            _I2x_std = _np.array([])
+            _I2y_mean = _np.array([])
+            _I2y_std = _np.array([])
 
             _I1_id0 = _map.I1_start_id - 1
             _I1_idf = _map.I1_end_id
@@ -1164,56 +1258,71 @@ class AnalysisWidget(_QWidget):
                     if _I1x is not None:
                         _I1x_item = _I1x.loc[(_I1x['x_pos'] == _x) &
                                              (_I1x['y_pos'] == _y)]
-                        _I1x_mean = _I1x_item['I1_mean'].iloc[-1]*10**6
-                        _I1x_std = _I1x_item['I1_std'].iloc[-1]*10**6
+                        _I1x_item = _I1x_item.sort_values('I1_std').drop_duplicates('x_pos')
+                        _I1x_mean = _np.append(
+                            _I1x_mean, _I1x_item['I1_mean'].iloc[0]*10**6)
+                        _I1x_std = _np.append(
+                            _I1x_std, _I1x_item['I1_std'].iloc[0]*10**6)
                     else:
-                        _I1x_mean = 0
-                        _I1x_std = 0
+                        _I1x_mean = _np.append(_I1x_mean, 0)
+                        _I1x_std = _np.append(_I1x_std,  0)
 
                     if _I1y is not None:
                         _I1y_item = _I1y.loc[(_I1y['x_pos'] == _x) &
                                              (_I1y['y_pos'] == _y)]
-                        _I1y_mean = _I1y_item['I1_mean'].iloc[-1]*10**6
-                        _I1y_std = _I1y_item['I1_std'].iloc[-1]*10**6
+                        _I1y_item = _I1y_item.sort_values('I1_std').drop_duplicates('x_pos')
+                        _I1y_mean = _np.append(
+                            _I1y_mean, _I1y_item['I1_mean'].iloc[0]*10**6)
+                        _I1y_std = _np.append(
+                            _I1y_std, _I1y_item['I1_std'].iloc[0]*10**6)
                     else:
-                        _I1y_mean = 0
-                        _I1y_std = 0
+                        _I1y_mean = _np.append(_I1y_mean, 0)
+                        _I1y_std = _np.append(_I1y_std,  0)
 
                     if _I2x is not None:
                         _I2x_item = _I2x.loc[(_I2x['x_pos'] == _x) &
                                              (_I2x['y_pos'] == _y)]
-                        _I2x_mean = _I2x_item['I2_mean'].iloc[-1]*10**5
-                        _I2x_std = _I2x_item['I2_std'].iloc[-1]*10**5
+                        _I2x_item = _I2x_item.sort_values('I2_std').drop_duplicates('x_pos')
+                        _I2x_mean = _np.append(
+                            _I2x_mean, _I2x_item['I2_mean'].iloc[-1]*10**5)
+                        _I2x_std = _np.append(
+                            _I2x_std, _I2x_item['I2_std'].iloc[-1]*10**5)
                     else:
-                        _I2x_mean = 0
-                        _I2x_std = 0
+                        _I2x_mean = _np.append(_I2x_mean, 0)
+                        _I2x_std = _np.append(_I2x_std, 0)
 
                     if _I2y is not None:
                         _I2y_item = _I2y.loc[(_I2y['x_pos'] == _x) &
                                              (_I2y['y_pos'] == _y)]
-                        _I2y_mean = _I2y_item['I2_mean'].iloc[-1]*10**5
-                        _I2y_std = _I2y_item['I2_std'].iloc[-1]*10**5
+                        _I2y_item = _I2y_item.sort_values('I2_std').drop_duplicates('x_pos')
+                        _I2y_mean = _np.append(
+                            _I2y_mean, _I2y_item['I2_mean'].iloc[-1]*10**5)
+                        _I2y_std = _np.append(
+                            _I2y_std, _I2y_item['I2_std'].iloc[-1]*10**5)
                     else:
-                        _I2y_mean = 0
-                        _I2y_std = 0
+                        _I2y_mean = _np.append(_I2y_mean, 0)
+                        _I2y_std = _np.append(_I2y_std, 0)
 
-                    _map.x_pos_array = _x
-                    _map.y_pos_array = _y
-                    _map.I1x = _I1x_mean
-                    _map.I1x_std = _I1x_std
-                    _map.I1y = _I1y_mean
-                    _map.I1y_std = _I1y_std
-                    _map.I2x = _I2x_mean
-                    _map.I2x_std = _I2x_std
-                    _map.I2y = _I2y_mean
-                    _map.I2y_std = _I2y_std
+            print(_x_array)
+            print(_I1x_mean)
+            _map.x_pos_array = _x_array
+            _map.y_pos_array = _y_array
+            _map.I1x = _I1x_mean
+            print(_map.I1x)
+            _map.I1x_std = _I1x_std
+            _map.I1y = _I1y_mean
+            _map.I1y_std = _I1y_std
+            _map.I2x = _I2x_mean
+            _map.I2x_std = _I2x_std
+            _map.I2y = _I2y_mean
+            _map.I2y_std = _I2y_std
 
-                    return True
+            return True
 
         except Exception:
-            _QMessageBox.warining(self, 'Warning',
-                                  'Failed to update integral map arrays.',
-                                  _QMessageBox.Ok)
+            _QMessageBox.warning(self, 'Warning',
+                                 'Failed to update integral map arrays.',
+                                 _QMessageBox.Ok)
             _traceback.print_exc(file=_sys.stdout)
             return False
 
@@ -1266,8 +1375,8 @@ class AnalysisWidget(_QWidget):
             #     _x_pos_array = _I2['x_pos'].drop_duplicates().values
             #     _y_pos_array = _I2['y_pos'].drop_duplicates().values
 
-            _x_pos_array = _map['x_pos_array'].values
-            _y_pos_array = _map['y_pos_array'].values
+            _x_pos_array = _json_to_array(_map['x_pos_array'].values[0])
+            _y_pos_array = _json_to_array(_map['y_pos_array'].values[0])
 
             self.ui.cmb_transv_pos.clear()
 
@@ -1282,6 +1391,79 @@ class AnalysisWidget(_QWidget):
 
         except Exception:
             _traceback.print_exc(file=_sys.stdout)
+
+    def multipoles(self):
+        """Gets multipole content from a field integral map, assuming this map
+        has at least 3 positions in the x direction for y=0 for I1x and I1y
+        components."""
+        try:
+            _map, _I1x, _I1y, _I2x, _I2y = self.load_map_df()
+
+            _x_pos_array = _I1x['x_pos'].values*1e-3
+            _y_pos_array = _I1x['y_pos'].values*1e-3
+            _I1x = _I1x['I1_mean'].values
+            _I1y = _I1y['I1_mean'].values
+
+            if any([_I1x is None,
+                    _I1y is None]):
+                _QMessageBox.information(self, 'Information', "Can't estimate "
+                                         "multipole coefficients, no I1x and "
+                                         "I1y measurements in the map.",
+                                         _QMessageBox.Ok)
+                return False
+
+            if not (0 in _y_pos_array):
+                _QMessageBox.information(self, 'Information', "Can't estimate "
+                                         "multipole coefficients, no y=0 "
+                                         "measurements in this map.",
+                                         _QMessageBox.Ok)
+                return False
+
+            if any([len(_I1x) < 3,
+                    len(_I1y) < 3]):
+                _QMessageBox.information(self, 'Information', "Can't estimate "
+                                         "multipole coefficients, needs at "
+                                         "least 3 I1x and I1y points in "
+                                         "the x axis.",
+                                         _QMessageBox.Ok)
+                return False
+
+            print(_x_pos_array, _I1x, _I1y)
+            degree = 10
+            bn = _np.polyfit(_x_pos_array, _I1y, degree)
+            an = _np.polyfit(_x_pos_array, _I1x, degree)
+
+            print('Bn: {}'.format(bn))
+            print('An: {}'.format(an))
+        except Exception:
+            print(_traceback.print_exc(file=_sys.stdout))
+            return False
+
+    def get_multipole_coefficients(self, map_df, degree):
+        """Fits first integral data to find multipole components, assuming y=0.
+
+        Args:
+            map_df (pandas DataFrame): Dataframe containing map measurement;
+            degree (int): maximum polynomial degree to be considered.
+        Returns:
+            Bn(numpy ndarray): numpy array containing Bn (normal) components,
+                               higher order first;
+            An(numpy ndarray): numpy array containing An (skew) components,
+                               higher order first.
+        """
+        try:
+            x = map_df['x_pos']*1e-3
+            y = map_df['y_pos']*1e-3
+            I1x = map_df['I1x']*1e-6
+            I1y = map_df['I1y']*1e-6
+
+            bn = _np.polyfit(x, I1y, degree)
+            an = _np.polyfit(x, I1x, degree)
+
+            return bn, an
+        except Exception:
+            print(_traceback.print_exc(file=_sys.stdout))
+            return False
 
     def stop_motors(self):
         try:

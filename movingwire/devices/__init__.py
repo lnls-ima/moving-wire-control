@@ -181,6 +181,7 @@ class Ppmac(Ppmac_eth):
                            9: 'BlSlewRate',
                            10: 'HomeOffset',
                            11: 'AmpFaultLevel',
+                           12: 'FeFatal',
                            }
 
     def motor_stopped(self, motor):
@@ -380,6 +381,26 @@ class Ppmac(Ppmac_eth):
             print('motor_limits failure in devices. Motor {0}'.format(motor))
             return None
 
+    def motor_fefatal(self, motor):
+        """Checks motor following error.
+
+        Args:
+            motor (int): motor number (Xa=1, Ya=2, Xb=3, Yb=4, Ra=5, Rb=6);
+        Returns:
+            True if there was following error fault;
+            False otherwise.
+        """
+        try:
+            _ans = int(self.query_motor_param(motor, self.motor_vars[12]))
+            if _ans:
+                return True
+            else:
+                return False
+        except Exception:
+            # _traceback.print_exc(file=_sys.stdout)
+            print('motor_fefatal failure in devices. Motor {0}'.format(motor))
+            return None
+
     def enable_motors(self, motors=[]):
         """Enables listed motor(s), disabling the others.
 
@@ -430,8 +451,9 @@ class Ppmac(Ppmac_eth):
                 True if successful, False otherwise.
                 """
         try:
-            self.motors.ppmac.write('#1..6k')
-            self.motors.ppmac.read()
+            self.write('#1..6k')
+            self.read()
+            self.flag_abort = True
             return True
         except Exception:
             _traceback.print_exc(file=_sys.stdout)

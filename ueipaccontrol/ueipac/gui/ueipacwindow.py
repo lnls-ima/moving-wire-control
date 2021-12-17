@@ -11,11 +11,11 @@ from qtpy.QtWidgets import (
 from qtpy.QtCore import QTimer as _QTimer
 import qtpy.uic as _uic
 
-from ueipac.gui import utils as _utils
+from ueipaccontrol.ueipac.gui import utils as _utils
 
-from ueipac.gui.ueipacwidget import UEIPACWidget \
+from ueipaccontrol.ueipac.gui.ueipacwidget import UEIPACWidget \
     as _UEIPACWidget
-    
+
 class UeipacWindow(_QMainWindow):
     """Main Window class for the Ueipac Control application."""
 

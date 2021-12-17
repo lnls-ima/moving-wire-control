@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>800</width>
-    <height>786</height>
+    <height>812</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -1105,6 +1105,13 @@
        </property>
        <property name="text">
         <string>Fiducialization</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pbt_wire_tension">
+       <property name="text">
+        <string>Wire Tension</string>
        </property>
       </widget>
      </item>
