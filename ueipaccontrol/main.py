@@ -2,7 +2,7 @@
 
 """Run the ueipac control application."""
 
-from ueipac.gui import ueipacapp
+from ueipaccontrol.ueipac.gui import ueipacapp
 
 
 THREAD = True

@@ -1462,6 +1462,10 @@ class MeasurementWidget(_QWidget):
                                                              _QMessageBox.Ok)
                                     return False
                                 self.map_measurement(_meas_I1x)
+                                # std limit I1x=20 G.cm
+                                if _meas_I1x.I1_std > 20e-6:
+                                    print('I1x std_error')
+                                    self.map_measurement(_meas_I1x)
                         if _cfg.I2:
                             _meas_I2x.x_pos = x
                             _meas_I2x.y_pos = y
@@ -1469,8 +1473,10 @@ class MeasurementWidget(_QWidget):
                             _meas_I2x.end_pos = y_final_pos
                             _meas_I2x.move_axis = move_axis
                             _meas_I2x.moving_motor = 2  # CHECK WHICH ONE IS THE BEST
-                            move_axis(y)
-                            move_axis(y)
+                            move_axis(y, m_mode=2)
+                            move_axis(y, m_mode=3)
+                            move_axis(y, m_mode=2)
+                            move_axis(y, m_mode=3)
                             for _ in range(_cfg.repetitions):
                                 if _ppmac.flag_abort:
                                     _QMessageBox.information(self, 'Warning',
@@ -1479,6 +1485,10 @@ class MeasurementWidget(_QWidget):
                                                              _QMessageBox.Ok)
                                     return False
                                 self.map_measurement(_meas_I2x, I2=True)
+                                # std limit I2x= 5 kG.cm2
+                                if _meas_I2x.I2_std > 5e-5:
+                                    print('I2x std_error')
+                                    self.map_measurement(_meas_I2x, I2=True)
 
                     if _cfg.Iy:
                         self.motors.move_y(y)
@@ -1500,6 +1510,10 @@ class MeasurementWidget(_QWidget):
                                                              _QMessageBox.Ok)
                                     return False
                                 self.map_measurement(_meas_I1y)
+                                # std limit I1y=10 G.cm
+                                if _meas_I1y.I1_std > 10e-6:
+                                    print('I1y std_error')
+                                    self.map_measurement(_meas_I1y)
                         if _cfg.I2:
                             _meas_I2y.x_pos = x
                             _meas_I2y.y_pos = y
@@ -1507,7 +1521,8 @@ class MeasurementWidget(_QWidget):
                             _meas_I2y.end_pos = x_final_pos
                             _meas_I2y.move_axis = move_axis
                             _meas_I2y.moving_motor = 1  # CHECK WHICH ONE IS THE BEST
-                            move_axis(x)
+                            move_axis(x, m_mode=2)
+                            move_axis(x, m_mode=3)
                             for _ in range(_cfg.repetitions):
                                 if _ppmac.flag_abort:
                                     _QMessageBox.warning(self, 'Warning',
@@ -1516,6 +1531,10 @@ class MeasurementWidget(_QWidget):
                                                          _QMessageBox.Ok)
                                     return False
                                 self.map_measurement(_meas_I2y, I2=True)
+                                # std limit I2y=2.5 kG.cm2
+                                if _meas_I2y.I2_std > 2.5e-5:
+                                    print('I1y std_error')
+                                    self.map_measurement(_meas_I2y, I2=True)
 
             if _cfg.I1:
                 self.meas_sw.db_update_database(self.database_name,
@@ -1584,13 +1603,17 @@ class MeasurementWidget(_QWidget):
 
         # go to init pos
         if not I2:
-            move_axis(_init_pos)
+            move_axis(_init_pos, m_mode=2)
+            move_axis(_init_pos, m_mode=3)
             # _sleep(0.5)
-            move_axis(_init_pos)
+            move_axis(_init_pos, m_mode=2)
+            move_axis(_init_pos, m_mode=3)
         else:
             moving_motor = _meas.moving_motor
-            move_axis(_init_pos, motor=moving_motor)
-            move_axis(_init_pos, motor=moving_motor)
+            move_axis(_init_pos, motor=moving_motor, m_mode=2)
+            move_axis(_init_pos, motor=moving_motor, m_mode=3)
+            move_axis(_init_pos, motor=moving_motor, m_mode=2)
+            move_axis(_init_pos, motor=moving_motor, m_mode=3)
 
         # _volt.read_from_device()
         for i in range(nmeasurements):
@@ -1612,25 +1635,35 @@ class MeasurementWidget(_QWidget):
                     _QMessageBox.warning(self, 'Warning',
                                          'Measurement aborted.')
 
+                if not I2:
+                    move_axis(_end_pos, m_mode=2)
+                else:
+                    move_axis(_end_pos, motor=moving_motor, m_mode=2)
+
                 # Forward measurement
                 _volt.start_measurement()
 #                     _ppmac.write('Gather.PhaseEnable=2')
                 _t0 = _time.time()
-                _sleep(acq_init_interval)
+                # _sleep(acq_init_interval)
+                _time.sleep(acq_init_interval)
                 # move step
                 if not I2:
-                    if not move_axis(_end_pos):
-                        move_axis(_init_pos)
+                    if not move_axis(_end_pos, m_mode=3):
+                        move_axis(_init_pos, m_mode=2)
+                        move_axis(_init_pos, m_mode=3)
                         _sleep(1)
-                        move_axis(_init_pos)
+                        move_axis(_init_pos, m_mode=2)
+                        move_axis(_init_pos, m_mode=3)
                         _sleep(duration + 9)
                         _volt.get_readings_from_memory(5)
                         continue
                 else:
-                    if not move_axis(_end_pos, motor=moving_motor):
-                        move_axis(_init_pos, motor=moving_motor)
+                    if not move_axis(_end_pos, motor=moving_motor, m_mode=3):
+                        move_axis(_init_pos, motor=moving_motor, m_mode=2)
+                        move_axis(_init_pos, motor=moving_motor, m_mode=3)
                         _sleep(1)
-                        move_axis(_init_pos, motor=moving_motor)
+                        move_axis(_init_pos, motor=moving_motor, m_mode=2)
+                        move_axis(_init_pos, motor=moving_motor, m_mode=3)
                         _sleep(duration + 9)
                         _volt.get_readings_from_memory(5)
                         continue
@@ -1654,25 +1687,35 @@ class MeasurementWidget(_QWidget):
                 # _sleep(3)
 
                 # Backward measurement
+                if not I2:
+                    move_axis(_init_pos, m_mode=2)
+                else:
+                    move_axis(_init_pos, motor=moving_motor, m_mode=2)
+
                 _volt.start_measurement()
 #                     _ppmac.write('Gather.PhaseEnable=2')
                 _t0 = _time.time()
-                _sleep(acq_init_interval)
+                # _sleep(acq_init_interval)
+                _time.sleep(acq_init_interval)
                 # move - step
                 if not I2:
-                    if not move_axis(_init_pos):
-                        move_axis(_init_pos)
+                    if not move_axis(_init_pos, m_mode=3):
+                        move_axis(_init_pos, m_mode=2)
+                        move_axis(_init_pos, m_mode=3)
                         _sleep(1)
-                        move_axis(_init_pos)
+                        move_axis(_init_pos, m_mode=2)
+                        move_axis(_init_pos, m_mode=3)
                         _sleep(duration + 9)
                         _volt.get_readings_from_memory(5)
                         self.get_volt_data(npoints)
                         continue
                 else:
-                    if not move_axis(_init_pos, motor=moving_motor):
-                        move_axis(_init_pos, motor=moving_motor)
+                    if not move_axis(_init_pos, motor=moving_motor, m_mode=3):
+                        move_axis(_init_pos, motor=moving_motor, m_mode=2)
+                        move_axis(_init_pos, motor=moving_motor, m_mode=3)
                         _sleep(1)
-                        move_axis(_init_pos, motor=moving_motor)
+                        move_axis(_init_pos, motor=moving_motor, m_mode=2)
+                        move_axis(_init_pos, motor=moving_motor, m_mode=3)
                         _sleep(duration + 9)
                         _volt.get_readings_from_memory(5)
                         continue
@@ -1711,3 +1754,6 @@ class MeasurementWidget(_QWidget):
         self.analysis.update_meas_list()
         _count = self.analysis.cmb_meas_name.count() - 1
         self.analysis.cmb_meas_name.setCurrentIndex(_count)
+
+        # check standard deviation
+        # limits I1x=20 G.cm; I1y=10 G.cm; I2x= 5 kG.cm2; I2y=2.5 kG.cm2

@@ -3,6 +3,8 @@
 __credits__     = [
 #     ('alpha_b.svg', 'Alpha B Icon (from https://materialdesignicons.com/)'),
     ('stop-circle-outline.svg', 'Stop Icon (from https://materialdesignicons.com/)'),
+    ('green_led.png', 'Green Led (from https://www.pngwing.com/)'),
+    ('red_led.png', 'Red Led (from https://www.pngwing.com/)'),
     ]
 
 

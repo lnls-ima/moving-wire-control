@@ -8,11 +8,13 @@ from qtpy.QtWidgets import (
     QApplication as _QApplication,
     QDialog as _QDialog,
     QMessageBox as _QMessageBox,
+    QVBoxLayout as _QVBoxLayout,
     )
 
 import qtpy.uic as _uic
 
 from movingwire.gui.utils import get_ui_file as _get_ui_file
+from imautils.gui.undconfigwidget import UndConfigWidget
 
 
 class MeasurementDialog(_QDialog):
@@ -25,6 +27,10 @@ class MeasurementDialog(_QDialog):
         # setup the ui
         uifile = _get_ui_file(self)
         self.ui = _uic.loadUi(uifile, self)
+
+        self.undctrl = UndConfigWidget()
+
+        self.ui.wdg_und.setLayout(self.undctrl.wdg_und)
 
         self.connect_signal_slots()
 

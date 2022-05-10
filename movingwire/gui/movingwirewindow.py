@@ -25,6 +25,8 @@ from movingwire.gui.ppmacwidget import PpmacWidget \
     as _PpmacWidget
 from movingwire.gui.databasewidget import DatabaseWidget \
     as _DatabaseWidget
+from imautils.gui.undulatorwidget import UndulatorWidget \
+    as _UndulatorWidget
 
 
 class MovingWireWindow(_QMainWindow):
@@ -54,6 +56,7 @@ class MovingWireWindow(_QMainWindow):
             'measurement',
             'analysis',
             'database',
+            'undulator',
             ]
 
         self.tab_widgets = [
@@ -63,6 +66,7 @@ class MovingWireWindow(_QMainWindow):
             _MeasurementWidget(),
             _AnalysisWidget(),
             _DatabaseWidget(),
+            _UndulatorWidget(),
             ]
 
         # connect signals and slots
@@ -80,7 +84,8 @@ class MovingWireWindow(_QMainWindow):
         for tab in self.tab_widgets:
             tab.init_tab()
 
-        for i in range(1, self.ui.twg_main.count() - 2):
+        # for i in range(1, self.ui.twg_main.count() - 2):
+        for i in range(1, self.ui.twg_main.count() - 4):
             self.ui.twg_main.setTabEnabled(i, False)
 
     def centralize_window(self):

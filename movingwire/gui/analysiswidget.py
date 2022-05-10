@@ -84,6 +84,7 @@ class AnalysisWidget(_QWidget):
         self.update_map_list()
 
     def init_tab(self):
+        self.motors = self.parent_window.motors
         self.load_measurement()
 
     @property

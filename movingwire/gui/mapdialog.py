@@ -10,6 +10,7 @@ from qtpy.QtWidgets import (
     QDialog as _QDialog,
     QMessageBox as _QMessageBox,
     )
+from imautils.gui.undconfigwidget import UndConfigWidget
 
 import qtpy.uic as _uic
 
@@ -32,6 +33,9 @@ class MapDialog(_QDialog):
         # setup the ui
         uifile = _get_ui_file(self)
         self.ui = _uic.loadUi(uifile, self)
+
+        self.undctrl = UndConfigWidget()
+        self.ui.wdg_und.setLayout(self.undctrl.wdg_und)
 
         self.cfg = _data.configuration.IntegralMapsCfg()
         self.cfg_aux = _data.configuration.IntegralMapsCfg()
@@ -266,6 +270,13 @@ class MapDialog(_QDialog):
             self.cfg.y_duration = self.ui.dsb_y_duration.value()
 
             self.cfg.repetitions = self.ui.sb_repetitions.value()
+
+            self.cfg.und_ctrl = self.undctrl.ui.chb_enable_und.isChecked()
+
+            if self.cfg.und_ctrl:
+                self.undctrl.load_cfg()
+                self.cfg.und_ctrl_cfg = self.undctrl.und.cfg.positions
+                print(self.cfg.und_ctrl_cfg)
 
             return True
         except Exception:

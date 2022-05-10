@@ -182,6 +182,8 @@ class Ppmac(Ppmac_eth):
                            10: 'HomeOffset',
                            11: 'AmpFaultLevel',
                            12: 'FeFatal',
+                           13: 'ProgJogPos',
+                           14: 'CompPos',
                            }
 
     def motor_stopped(self, motor):
@@ -201,7 +203,7 @@ class Ppmac(Ppmac_eth):
             else:
                 return False
         except Exception:
-            _traceback.print_exc(file=_sys.stdout)
+            # _traceback.print_exc(file=_sys.stdout)
             return None
 
     def in_motion(self):
@@ -213,7 +215,7 @@ class Ppmac(Ppmac_eth):
             ans = self.read().split(msg)[-1]
             return int(ans.split('=')[-1][0])
         except Exception:
-            _traceback.print_exc(file=_sys.stdout)
+            # _traceback.print_exc(file=_sys.stdout)
             return None
 
     def read_motor_pos(self, motors=[]):
@@ -237,7 +239,7 @@ class Ppmac(Ppmac_eth):
             pos = _np.array([float(val) for val in ans1])
             return pos
         except Exception:
-            _traceback.print_exc(file=_sys.stdout)
+            # _traceback.print_exc(file=_sys.stdout)
             return None
 
     def read_axis_pos(self, axis='', coord=1):
@@ -254,7 +256,7 @@ class Ppmac(Ppmac_eth):
                 print(axis)
                 return None
         except Exception:
-            _traceback.print_exc(file=_sys.stdout)
+            # _traceback.print_exc(file=_sys.stdout)
             return None
 
     def motor_homed(self, motor):
@@ -274,7 +276,7 @@ class Ppmac(Ppmac_eth):
             else:
                 return False
         except Exception:
-            _traceback.print_exc(file=_sys.stdout)
+            # _traceback.print_exc(file=_sys.stdout)
             return None
 
     def query_motor_param(self, motor, param):
@@ -291,7 +293,7 @@ class Ppmac(Ppmac_eth):
             _ans = self.read()
             return _ans.split('=')[-1].strip('\r\n\x06')
         except Exception:
-            _traceback.print_exc(file=_sys.stdout)
+            # _traceback.print_exc(file=_sys.stdout)
             return None
 
     def set_motor_param(self, motor, param, value):
@@ -315,7 +317,7 @@ class Ppmac(Ppmac_eth):
             return True
 
         except Exception:
-            _traceback.print_exc(file=_sys.stdout)
+            # _traceback.print_exc(file=_sys.stdout)
             return False
 
     def motor_fault(self, motor):
@@ -441,7 +443,7 @@ class Ppmac(Ppmac_eth):
             self.write('#{0}hmz'.format(motor))
             self.set_motor_param(motor, 'HomeOffset', current_home_offset)
         except Exception:
-            _traceback.print_exc(file=_sys.stdout)
+            # _traceback.print_exc(file=_sys.stdout)
             return False
 
     def stop_motors(self):
@@ -456,7 +458,7 @@ class Ppmac(Ppmac_eth):
             self.flag_abort = True
             return True
         except Exception:
-            _traceback.print_exc(file=_sys.stdout)
+            # _traceback.print_exc(file=_sys.stdout)
             return False
 
     def remove_backlash(self, target_pos=0, elim=2, ccw=1, max_tries=100):
@@ -515,7 +517,7 @@ class Ppmac(Ppmac_eth):
             else:
                 return False
         except Exception:
-            _traceback.print_exc(file=_sys.stdout)
+            # _traceback.print_exc(file=_sys.stdout)
             return None
 
     def align_motors(self, limit=2, max_tries=100, bck_stps=200,
@@ -576,7 +578,7 @@ class Ppmac(Ppmac_eth):
                 return False
 
         except Exception:
-            _traceback.print_exc(file=_sys.stdout)
+            # _traceback.print_exc(file=_sys.stdout)
             return False
 
 #     def remove_backlash2(self, target_pos=0, elim=2, ccw=1, max_tries=100,
