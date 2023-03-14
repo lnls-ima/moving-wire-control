@@ -699,15 +699,15 @@ class MeasurementWidget(_QWidget):
                 accel = ppmac_cfg.accel_x  # [mm/s^2]
                 jerk = ppmac_cfg.jerk_x  # [mm/s^3]
                 _meas.y_pos = self.motors.ui.dsb_pos_y.value()
-                _ppmac.enable_motors([1, 3])
+                _ppmac.enable_motors([2, 4])
                 move_axis = self.motors.move_x
                 # sf = self.motors.cfg.x_sf
                 motion_step = self.motors.cfg.x_step
                 if 'a' in motion_axis:
-                    moving_motor = 1  # '1'
+                    moving_motor = 2  # '1'
                     # static_motor = 3  # '3'
                 elif 'b' in motion_axis:
-                    moving_motor = 3  # '3'
+                    moving_motor = 4  # '3'
                     # static_motor = 1  # '1'
 
             elif 'Y' in motion_axis:
@@ -715,15 +715,15 @@ class MeasurementWidget(_QWidget):
                 accel = ppmac_cfg.accel_y  # [mm/s^2]
                 jerk = ppmac_cfg.jerk_y  # [mm/s^3]
                 _meas.x_pos = self.motors.ui.dsb_pos_x.value()
-                _ppmac.enable_motors([2, 4])
+                _ppmac.enable_motors([1, 3])
                 move_axis = self.motors.move_y
                 motion_step = self.motors.cfg.y_step
                 # sf = self.motors.cfg.y_sf/self.motors.cfg.y_stps_per_cnt  # [mm/steps]
                 if 'a' in motion_axis:
-                    moving_motor = 2  # '2'
+                    moving_motor = 1  # '2'
                     # static_motor = 4  # '4'
                 elif 'b' in motion_axis:
-                    moving_motor = 4  # '4'
+                    moving_motor = 3  # '4'
                     # static_motor = 2  # '2'
 
             #self.motors.configure_ppmac()
@@ -1472,7 +1472,7 @@ class MeasurementWidget(_QWidget):
                             _meas_I2x.start_pos = y_init_pos
                             _meas_I2x.end_pos = y_final_pos
                             _meas_I2x.move_axis = move_axis
-                            _meas_I2x.moving_motor = 2  # CHECK WHICH ONE IS THE BEST
+                            _meas_I2x.moving_motor = 1  # CHECK WHICH ONE IS THE BEST
                             move_axis(y, m_mode=2)
                             move_axis(y, m_mode=3)
                             move_axis(y, m_mode=2)
@@ -1520,7 +1520,7 @@ class MeasurementWidget(_QWidget):
                             _meas_I2y.start_pos = x_init_pos
                             _meas_I2y.end_pos = x_final_pos
                             _meas_I2y.move_axis = move_axis
-                            _meas_I2y.moving_motor = 1  # CHECK WHICH ONE IS THE BEST
+                            _meas_I2y.moving_motor = 2  # CHECK WHICH ONE IS THE BEST
                             move_axis(x, m_mode=2)
                             move_axis(x, m_mode=3)
                             for _ in range(_cfg.repetitions):
