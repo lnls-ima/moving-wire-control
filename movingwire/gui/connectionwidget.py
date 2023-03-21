@@ -8,6 +8,7 @@ from qtpy.QtWidgets import (
     QWidget as _QWidget,
     QMessageBox as _QMessageBox,
     QApplication as _QApplication,
+    QProgressDialog as _QProgressDialog
     )
 from qtpy.QtCore import Qt as _Qt
 import qtpy.uic as _uic
@@ -84,30 +85,81 @@ class ConnectionWidget(_QWidget):
             _agilent_board = self.ui.sb_agilent_board.value()
             _mult_addr = self.ui.sb_mult_addr.value()
 
+            actualstep = 0
+            nconnectionsteps = 0
+            if self.ui.chb_ppmac_en.isChecked() == True:
+                nconnectionsteps += 1
+            if self.ui.chb_ps_en.isChecked() == True:
+                nconnectionsteps += 1
+            if self.ui.chb_voltmeter_en.isChecked() == True:
+                nconnectionsteps += 1
+            if self.ui.chb_multichannel_en.isChecked() == True:
+                nconnectionsteps += 1
+            _prg_dialog = _QProgressDialog('Connecting Devices...', 'Abort', 0,
+                                           nconnectionsteps, self)
+            _prg_dialog.setWindowTitle('Connection Progress')
+            _prg_dialog.show()
 #             if self.ui.chb_integrator_en.isChecked():
 #             _fdi.inst = _fdi.rm.open_resource(_fdi_inst.encode())
-            if self.ui.chb_ppmac_en.isChecked():
-                _ppmac.connect(_ppmac_ip)
-                _ppmac.ppmac.timeout = 3
-                _ppmac.ppmac_ssh = _ppmac.ssh.invoke_shell(term='vt100')
-                _ppmac.ftp = _ppmac.ssh.open_sftp()
-            if self.ui.chb_ps_en.isChecked():
-                _ps.Connect(self.ui.cmb_ps_port.currentText())
-            if self.ui.chb_voltmeter_en.isChecked():
-                _volt.connect(address=_agilent_addr, board=_agilent_board)
-            if self.ui.chb_multichannel_en.isChecked():
-                _mult.connect(_mult_addr)
-            _QMessageBox.information(self, 'Information',
-                                     'Devices connected.',
-                                     _QMessageBox.Ok)
+            while _prg_dialog.wasCanceled() == False:
+                _QApplication.processEvents()
+                if self.ui.chb_ppmac_en.isChecked():
+                    if _prg_dialog.wasCanceled() == True:
+                        self.disconnect()
+                        break
+                    _ppmac.connect(_ppmac_ip)
+                    _ppmac.ppmac.timeout = 3
+                    _ppmac.ppmac_ssh = _ppmac.ssh.invoke_shell(term='vt100')
+                    _ppmac.ftp = _ppmac.ssh.open_sftp()
 
-            self.ui.pbt_connect.setEnabled(False)
-            self.ui.pbt_disconnect.setEnabled(True)
-            for i in range(1, self.parent_window.ui.twg_main.count() - 2):
-                self.parent_window.ui.twg_main.setTabEnabled(i, True)
+                    #Check if the motors are homed
+                    if _ppmac.motor_homed(1) and _ppmac.motor_homed(3) == True:
+                        self.parent_window.tab_widgets[1].ui.chb_homed_y.setChecked(
+                            True)
+                    if _ppmac.motor_homed(2) and _ppmac.motor_homed(4) == True:
+                        self.parent_window.tab_widgets[1].ui.chb_homed_x.setChecked(
+                            True)
 
-            return True
+                    actualstep += 1
+                    _prg_dialog.setValue(actualstep)
+                    _QApplication.processEvents() 
+                if self.ui.chb_ps_en.isChecked():
+                    if _prg_dialog.wasCanceled() == True:
+                        self.disconnect()
+                        break
+                    _ps.Connect(self.ui.cmb_ps_port.currentText())
+                    actualstep += 1
+                    _prg_dialog.setValue(actualstep)
+                    _QApplication.processEvents() 
+                if self.ui.chb_voltmeter_en.isChecked():
+                    if _prg_dialog.wasCanceled() == True:
+                        self.disconnect()
+                        break
+                    _volt.connect(address=_agilent_addr, board=_agilent_board)
+                    actualstep += 1
+                    _prg_dialog.setValue(actualstep)
+                    _QApplication.processEvents() 
+                if self.ui.chb_multichannel_en.isChecked():
+                    if _prg_dialog.wasCanceled() == True:
+                        self.disconnect()
+                        break
+                    _mult.connect(_mult_addr)
+                    actualstep += 1
+                    _prg_dialog.setValue(actualstep)
+                    _QApplication.processEvents()
+                _QMessageBox.information(self, 'Information',
+                                         'Devices connected.',
+                                         _QMessageBox.Ok)
+
+                self.ui.pbt_connect.setEnabled(False)
+                self.ui.pbt_disconnect.setEnabled(True)
+                for i in range(1, self.parent_window.ui.twg_main.count() - 2):
+                    self.parent_window.ui.twg_main.setTabEnabled(i, True)
+
+                return True
+
         except Exception:
+            _prg_dialog.destroy()
             self.ui.pbt_connect.setEnabled(True)
             self.ui.pbt_disconnect.setEnabled(False)
             _traceback.print_exc(file=_sys.stdout)

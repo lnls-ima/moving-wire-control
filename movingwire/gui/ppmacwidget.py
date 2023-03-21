@@ -10,6 +10,7 @@ from qtpy.QtWidgets import (
     QWidget as _QWidget,
     QMessageBox as _QMessageBox,
     QApplication as _QApplication,
+    QProgressDialog as _QProgressDialog
     )
 from qtpy.QtCore import (
     Qt as _Qt,
@@ -66,6 +67,7 @@ class PpmacWidget(_QWidget):
 #         self.load_cfg()
         self.update_cfg_from_ui()
         self.connect_signal_slots()
+
 
     def init_tab(self):
         name = self.ui.cmb_cfg_name.currentText()
@@ -450,6 +452,7 @@ class PpmacWidget(_QWidget):
             True if successfull;
             False otherwise."""
         try:
+            #Progress Dialog during the homing process
             _ans = _QMessageBox.question(self, 'Attention', 'Do you want to '
                                          'home the X axis?',
                                          _QMessageBox.Yes |
@@ -458,60 +461,109 @@ class PpmacWidget(_QWidget):
             if _ans == _QMessageBox.No:
                 return False
 
-            self.enable_moving_buttons(False)
-            # self.ui.chb_homed_x.setCheckable(True)
-            self.ui.groupBox_3.setEnabled(False)
-            self.ui.pbt_configure.setEnabled(False)
-            self.ui.pbt_fiducialization.setEnabled(False)
-            self.parent_window.ui.twg_main.setTabEnabled(3, False)
+            #Set the hioming jog speed at 2mm/s
+            _ppmac.set_motor_param(2, 'JogSpeed', 100)
+            _ppmac.set_motor_param(4, 'JogSpeed', 100)
+
+            xnofsteps = 4
+            xactualstep = 0
+            _prg_dialog = _QProgressDialog('Homing process in progress...', 'Abort', 0,
+                                               xnofsteps, self)
+            _prg_dialog.setWindowTitle('Homing X axis')
+            _prg_dialog.show()
             _QApplication.processEvents()
-            self.update_flag = False
-            self.timer.stop()
-            _sleep(0.5)
+            while _prg_dialog.wasCanceled() == False:
 
-            # Clears fiducialization offsets
-            _ppmac.set_motor_param(2, 'CompPos', 0)
-            _ppmac.set_motor_param(4, 'CompPos', 0)
-#             with _ppmac.lock_ppmac:
-            _ppmac.write('#2,4j/')
-            _ppmac.write('enable plc HomeX')
-            _sleep(0.1)
-            _ppmac.read()
-            _sleep(3)
+                self.enable_moving_buttons(False)
+                # self.ui.chb_homed_x.setCheckable(True)
+                self.ui.groupBox_3.setEnabled(False)
+                self.ui.pbt_configure.setEnabled(False)
+                self.ui.pbt_fiducialization.setEnabled(False)
+                self.parent_window.ui.twg_main.setTabEnabled(3, False)
+                _QApplication.processEvents()
+                # self.update_flag = False
+                self.timer.stop()
+                _sleep(0.5)
 
-            _t0 = _time.time()
-            while (all([not _ppmac.motor_homed(2),
-                        not _ppmac.motor_homed(4)])):
-                _sleep(1)
-                if _time.time() - _t0 > 10*60:
-                    raise RuntimeError('X Homing timeout (10 minutes).')
+                xactualstep += 1
+                _prg_dialog.setValue(xactualstep)
+                _QApplication.processEvents()
+                if _prg_dialog.wasCanceled() == True:
+                    self.stop_motors()
+                    raise RuntimeError('Homing Aborted')
 
-            _sleep(2)
+                # Clears fiducialization offsets
+                _ppmac.set_motor_param(2, 'CompPos', 0)
+                _ppmac.set_motor_param(4, 'CompPos', 0)
+    #             with _ppmac.lock_ppmac:
+                _ppmac.write('#2,4j/')
+                _ppmac.write('enable plc HomeX')
+                _sleep(0.1)
+                _ppmac.read()
+                _sleep(3)
 
-            # Sets fiducialization parameters again:
-            self.load_fiduc_cfg()
-            _ppmac.write('#2,4k')
-            _ppmac.set_motor_param(2, 'CompPos', self.fiduc_cfg.offset_xa)
-            _ppmac.set_motor_param(4, 'CompPos', self.fiduc_cfg.offset_xb)
-            _ppmac.write('#2,4j/')
+                xactualstep += 1
+                _prg_dialog.setValue(xactualstep)
+                _QApplication.processEvents()
+                if _prg_dialog.wasCanceled() == True:
+                    self.stop_motors()
+                    raise RuntimeError('Homing Aborted')
 
-            self.move_x(0)
+                _t0 = _time.time()
+                while (all([not _ppmac.motor_homed(2),
+                            not _ppmac.motor_homed(4)])):
+                    _sleep(1)
+                    if _time.time() - _t0 > 10*60:
+                        raise RuntimeError('X Homing timeout (10 minutes).')
+                    self.update_position()
+                    _QApplication.processEvents()
+                    if _prg_dialog.wasCanceled() == True:
+                        self.stop_motors()
+                        raise RuntimeError('Homing Aborted')
 
-            self.ui.groupBox_3.setEnabled(True)
-            self.ui.chb_homed_x.setChecked(True)
-            _QApplication.processEvents()
-            # self.ui.chb_homed_x.setCheckable(False)
-            self.ui.pbt_configure.setEnabled(True)
-            self.ui.pbt_fiducialization.setEnabled(True)
-            self.parent_window.ui.twg_main.setTabEnabled(3, True)
+                _sleep(2)
 
-            self.enable_moving_buttons(True)
-            # move_y enables timer, no need to start it again
-            # self.timer.start(1000)
-            _QMessageBox.information(self, 'Information',
-                                     'X homing complete.',
-                                     _QMessageBox.Ok)
-            return True
+                xactualstep += 1
+                _prg_dialog.setValue(xactualstep)
+                _QApplication.processEvents()
+                if _prg_dialog.wasCanceled() == True:
+                    self.stop_motors()
+                    raise RuntimeError('Homing Aborted')
+
+                # Sets fiducialization parameters again:
+                self.load_fiduc_cfg()
+                _ppmac.write('#2,4k')
+                _ppmac.set_motor_param(2, 'CompPos', self.fiduc_cfg.offset_xa)
+                _ppmac.set_motor_param(4, 'CompPos', self.fiduc_cfg.offset_xb)
+                _ppmac.write('#2,4j/')
+
+                self.move_x(0)
+
+                self.ui.groupBox_3.setEnabled(True)
+                self.ui.chb_homed_x.setChecked(True)
+                _QApplication.processEvents()
+                # self.ui.chb_homed_x.setCheckable(False)
+                self.ui.pbt_configure.setEnabled(True)
+                self.ui.pbt_fiducialization.setEnabled(True)
+                self.parent_window.ui.twg_main.setTabEnabled(3, True)
+
+                self.enable_moving_buttons(True)
+                # move_y enables timer, no need to start it again
+                # self.timer.start(1000)
+
+                xactualstep += 1
+                _prg_dialog.setValue(xactualstep)
+                _QApplication.processEvents()
+                if _prg_dialog.wasCanceled() == True:
+                    self.stop_motors()
+                    raise RuntimeError('Homing Aborted')
+
+                _QMessageBox.information(self, 'Information',
+                                         'X homing complete.',
+                                         _QMessageBox.Ok)
+                return True
+                break
+
         except Exception:
             self.ui.groupBox_3.setEnabled(True)
             self.ui.chb_homed_x.setChecked(False)
@@ -519,6 +571,7 @@ class PpmacWidget(_QWidget):
             self.ui.pbt_configure.setEnabled(True)
             self.ui.pbt_fiducialization.setEnabled(True)
             self.parent_window.ui.twg_main.setTabEnabled(3, True)
+            self.enable_moving_buttons(True)
 
             # _traceback.print_exc(file=_sys.stdout)
             print('home_x failure in ppmacwidget.')
@@ -544,56 +597,107 @@ class PpmacWidget(_QWidget):
             if _ans == _QMessageBox.No:
                 return False
 
-            self.enable_moving_buttons(False)
-            # self.ui.chb_homed_x.setCheckable(True)
-            self.ui.groupBox_3.setEnabled(False)
-            self.ui.pbt_configure.setEnabled(False)
-            self.ui.pbt_fiducialization.setEnabled(False)
-            self.parent_window.ui.twg_main.setTabEnabled(3, False)
+            #Set the homing jog speed at 2mm/s
+            _ppmac.set_motor_param(1, 'JogSpeed', 100)
+            _ppmac.set_motor_param(3, 'JogSpeed', 100)
+
+            ynofsteps = 4
+            yactualstep = 0
+            _prg_dialog = _QProgressDialog('Homing process in progress...', 'Abort', 0,
+                                               ynofsteps, self)
+            _prg_dialog.setWindowTitle('Homing Y axis')
+            _prg_dialog.show()
             _QApplication.processEvents()
-            self.update_flag = False
-            self.timer.stop()
-            _sleep(0.5)
 
-#             with _ppmac.lock_ppmac:
-            _ppmac.write('#1,3j/')
-            _ppmac.write('enable plc HomeY')
-            _sleep(0.1)
-            _ppmac.read()
-            _sleep(3)
+            while _prg_dialog.wasCanceled() == False:
 
-            _t0 = _time.time()
-            while (all([not _ppmac.motor_homed(1),
-                        not _ppmac.motor_homed(3)])):
-                _sleep(1)
-                if _time.time() - _t0 > 10*60:
-                    raise RuntimeError('Y Homing timeout (10 minutes).')
+                self.enable_moving_buttons(False)
+                # self.ui.chb_homed_x.setCheckable(True)
+                self.ui.groupBox_3.setEnabled(False)
+                self.ui.pbt_configure.setEnabled(False)
+                self.ui.pbt_fiducialization.setEnabled(False)
+                self.parent_window.ui.twg_main.setTabEnabled(3, False)
+                _QApplication.processEvents()
+                # self.update_flag = False
+                self.timer.stop()
+                _sleep(0.5)
 
-            _sleep(2)
-            self.move_y(0)
+                yactualstep += 1
+                _prg_dialog.setValue(yactualstep)
+                _QApplication.processEvents()
+                if _prg_dialog.wasCanceled() == True:
+                    self.stop_motors()
+                    raise RuntimeError('Homing Aborted')
 
-            self.ui.groupBox_3.setEnabled(True)
-            self.ui.chb_homed_y.setChecked(True)
-            _QApplication.processEvents()
-            # self.ui.chb_homed_x.setCheckable(False)
-            self.ui.pbt_configure.setEnabled(True)
-            self.ui.pbt_fiducialization.setEnabled(True)
-            self.parent_window.ui.twg_main.setTabEnabled(3, True)
+    #             with _ppmac.lock_ppmac:
+                _ppmac.write('#1,3j/')
+                _ppmac.write('enable plc HomeY')
+                _sleep(0.1)
+                _ppmac.read()
+                _sleep(3)
 
-            self.enable_moving_buttons(True)
-            # move_y enables timer, no need to start it again
-            # self.timer.start(1000)
-            _QMessageBox.information(self, 'Information',
-                                     'Y homing complete.',
-                                     _QMessageBox.Ok)
-            return True
+                yactualstep += 1
+                _prg_dialog.setValue(yactualstep)
+                _QApplication.processEvents()
+                if _prg_dialog.wasCanceled() == True:
+                    self.stop_motors()
+                    raise RuntimeError('Homing Aborted')
+
+                _t0 = _time.time()
+                while (all([not _ppmac.motor_homed(1),
+                            not _ppmac.motor_homed(3)])):
+                    _sleep(1)
+                    if _time.time() - _t0 > 10*60:
+                        raise RuntimeError('Y Homing timeout (10 minutes).')
+                    self.update_position()
+                    _QApplication.processEvents()
+                    if _prg_dialog.wasCanceled() == True:
+                        self.stop_motors()
+                        raise RuntimeError('Homing Aborted')
+
+                _sleep(2)
+
+                yactualstep += 1
+                _prg_dialog.setValue(yactualstep)
+                _QApplication.processEvents()
+                if _prg_dialog.wasCanceled() == True:
+                    self.stop_motors()
+                    raise RuntimeError('Homing Aborted')
+
+                self.move_y(0)
+
+                self.ui.groupBox_3.setEnabled(True)
+                self.ui.chb_homed_y.setChecked(True)
+                _QApplication.processEvents()
+                # self.ui.chb_homed_x.setCheckable(False)
+                self.ui.pbt_configure.setEnabled(True)
+                self.ui.pbt_fiducialization.setEnabled(True)
+                self.parent_window.ui.twg_main.setTabEnabled(3, True)
+
+                self.enable_moving_buttons(True)
+                # move_y enables timer, no need to start it again
+                # self.timer.start(1000)
+
+                yactualstep += 1
+                _prg_dialog.setValue(yactualstep)
+                _QApplication.processEvents()
+                if _prg_dialog.wasCanceled() == True:
+                    self.stop_motors()
+                    raise RuntimeError('Homing Aborted')
+
+                _QMessageBox.information(self, 'Information',
+                                         'Y homing complete.',
+                                         _QMessageBox.Ok)
+                return True
+                break
         except Exception:
             self.ui.groupBox_3.setEnabled(True)
-            self.ui.chb_homed_x.setChecked(False)
+            self.ui.chb_homed_y.setChecked(False)
             # self.ui.chb_homed_x.setCheckable(False)
             self.ui.pbt_configure.setEnabled(True)
             self.ui.pbt_fiducialization.setEnabled(True)
             self.parent_window.ui.twg_main.setTabEnabled(3, True)
+            self.enable_moving_buttons(True)
 
             # _traceback.print_exc(file=_sys.stdout)
             print('home_y failure in ppmacwidget.')

@@ -1520,7 +1520,7 @@ class MeasurementWidget(_QWidget):
                             _meas_I2y.start_pos = x_init_pos
                             _meas_I2y.end_pos = x_final_pos
                             _meas_I2y.move_axis = move_axis
-                            _meas_I2y.moving_motor = 4  # Wire moves at entrance
+                            _meas_I2y.moving_motor = 4  
                             move_axis(x, m_mode=2)
                             move_axis(x, m_mode=3)
                             for _ in range(_cfg.repetitions):
