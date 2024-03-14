@@ -184,7 +184,21 @@ class Ppmac(Ppmac_eth):
                            12: 'FeFatal',
                            13: 'ProgJogPos',
                            14: 'CompPos',
+                           15: 'AmpEna',
                            }
+
+    def check_errors(self, motor_id):
+
+        fault_error = [False, False, False, False]
+        limit_error = [False, False, False, False]
+        fefatal_error = [False, False, False, False]
+
+        for i in motor_id:
+            fault_error[i-1] = _ppmac.motor_fault(i-1)
+            limit_error[i-1] = _ppmac.motor_limits(i-1)
+            fefatal_error[i-1] = _ppmac.motor_fefatal(i-1)
+        if fault_error or limit_error or fefatal_error:
+            pass
 
     def motor_stopped(self, motor):
         """Checks if the motor is stopped.

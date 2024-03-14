@@ -1,0 +1,53 @@
+Sys.pAbortAll = 0
+undefine all
+
+global CompAddDist;
+global ComparePos;
+global distance;
+global acce;
+global n_scans;
+
+global Motor1Homed;
+global Motor1HomeSpeed = 10;
+
+global Motor2Homed;
+global Motor2HomeSpeed = 1;
+
+global Motor3Homed;
+global Motor3HomeSpeed = 10;
+
+global Motor4Homed;
+global Motor4HomeSpeed = 1;
+
+global Motor5Homed;
+global Motor5HomeSpeed = 10;
+
+global Motor6Homed;
+global Motor6HomeSpeed = 10;
+
+global SyncError_fI_horizontal
+global SyncError_sI_horizontal
+global SyncError_fI_vertical
+global SyncError_sI_vertical
+global VelError_h
+global VelError_v
+global MovError
+global EncPos
+
+//Rotary motion definitions
+global startPos = 0  //measurement initial position [rev]
+global endPos = 0.5 //end of measurement position [rev]
+global targetPos = 0 //prog 4 target pos [rev]
+global targetError = 10 //prog 4 max targetPos error [encoder counts]
+global targetDir = 0 //axis A next move direction (1:positive, -1:negative)
+global lastTargetDir = 0 //axis A last move direction (1:positive, -1:negative, 0:no previous movement)
+global steps = 1 //number of steps between startPos and endPos []
+global blComp = 0.1	//backlash compensation before starting measurement [rev]
+global wait = 1000	//time to wait between movements during a measurement [ms]
+global Aj = 0	//rotation motor jerk [ms]
+global Aac = -0.2 //rotation motor acceleration/deceleration [-ms/mcounts]
+global Av = 204.8	//rotatation motor speed [m.counts/ms]
+global motionFlag = 0 //motion flag
+global blFlag = 1 //compensate backlash flag
+global measureFlag = 1 //measure flag
+global enc2steps = 102400/360000 //encoder counts to microstep counts

@@ -1,0 +1,22 @@
+//Data packing, it allows the CPU to access all bits of the 10-bit registers where the monitored data is stored. Knowing this value might be important for the general coding. Setting it to 0 will cause the Unpack. 
+Sys.WpKey = $AAAAAAAA // Disable Write-Protection
+ 
+//Output Data
+PowerBrick[0].Chan[0].PackOutData = 0 // Channel #1 Unpack Output Data
+PowerBrick[0].Chan[1].PackOutData = 0 // Channel #2 Unpack Output Data
+PowerBrick[0].Chan[2].PackOutData = 0 // Channel #3 Unpack Output Data
+PowerBrick[0].Chan[3].PackOutData = 0 // Channel #4 Unpack Output Data
+PowerBrick[1].Chan[0].PackOutData = 0 // Channel #5 Unpack Output Data
+PowerBrick[1].Chan[1].PackOutData = 0 // Channel #6 Unpack Output Data
+PowerBrick[1].Chan[2].PackOutData = 0 // Channel #7 Unpack Output Data
+PowerBrick[1].Chan[3].PackOutData = 0 // Channel #8 Unpack Output Data
+ 
+//Input Data
+PowerBrick[0].Chan[0].PackInData = 0 // Channel #1 Unpack Input Data
+PowerBrick[0].Chan[1].PackInData = 0 // Channel #2 Unpack Input Data
+PowerBrick[0].Chan[2].PackInData = 0 // Channel #3 Unpack Input Data
+PowerBrick[0].Chan[3].PackInData = 0 // Channel #4 Unpack Input Data
+PowerBrick[1].Chan[0].PackInData = 0 // Channel #5 Unpack Input Data
+PowerBrick[1].Chan[1].PackInData = 0 // Channel #6 Unpack Input Data
+PowerBrick[1].Chan[2].PackInData = 0 // Channel #7 Unpack Input Data
+PowerBrick[1].Chan[3].PackInData = 0 // Channel #8 Unpack Input Data

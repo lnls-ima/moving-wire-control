@@ -1,0 +1,128 @@
+//Motor 2
+#define MOT2_DIRECTION 1
+
+//Amp mode
+
+BrickLV.Chan[1].TwoPhaseMode = 1 // Motor #1 output mode definition, 1 for Stepper Motors and 0 for brushless/brush motors.
+BrickLV.Chan[1].I2tWarnOnly = 0
+
+//Pwmsf PWM scaling factor, it depends on the voltage that is applied to the DC bus and to the motor. If it is equal than its used the following configuration. Consult Power PMAC LV Manual, at page 124 to check the numbers.
+
+Motor[2].PwmSf = MOT2_DIRECTION * 0.95 * 16384
+//Motor[2].PwmSf = MOT2_DIRECTION*15237
+
+//I2T Current Integration and Safety Control of current sending to motors. The Power Brick LV can be set up to fault a motor if the time-integrated current levels exceed a certain threshold. This can protect the motor (and drive) from damage due to overheating. It integrates the square of current over time ? commonly known as I2T ("eye-squared-tee") protection.
+
+GLOBAL Ch2MaxAdc = 33.85; // Max ADC reading [A peak] -User Input. 33.85 as a default value for the 5 A/ 15 configuration. Consult the Power PMAC LV manual, page 128.
+GLOBAL Ch2RmsPeakCur = 5.7; // RMS Peak Current [A rms] -User Input - Datasheet
+GLOBAL Ch2RmsContCur = 3.7; // RMS Continuous Current [A rms] --User Input
+GLOBAL Ch2TimeAtPeak = 1; // Time Allowed at peak [sec] --User Input
+
+Motor[2].MaxDac = Ch2RmsPeakCur * 40132.44 / Ch2MaxAdc
+Motor[2].I2TSet = Ch2RmsContCur * 40132.44 / Ch2MaxAdc
+Motor[2].I2tTrip = (POW(Motor[2].MaxDac,2) - POW(Motor[2].I2TSet,2)) * Ch2TimeAtPeak
+Motor[2].IdCmd = Motor[2].I2TSet / 2
+//Motor[2].MaxDac = 716.78784
+//Motor[2].I2tSet = 4654.6304
+//Motor[2].I2tTrip = 513784.84
+//Motor[2].IdCmd = 2327.3152
+
+// Encoder
+Gate3[0].EncClockDiv = 1 //Set the encoder clock as 100/(2^(ClockDiv)) MHz
+Gate3[0].Chan[1].EncCtrl = 3 // 3: x4 quadrature decode CW. 7: x4 quadrature decode CCW
+	// open loop
+EncTable[2].type = 11
+EncTable[2].pEnc = Motor[2].PhasePos.a
+EncTable[2].index1 = 5
+EncTable[2].index2 = 0
+EncTable[2].index3 = 0
+EncTable[2].index4 = 0
+EncTable[2].index5 = 255
+EncTable[2].index6 = 1
+EncTable[2].ScaleFactor = 1 / (256 * (EncTable[2].index5 + 1) * EXP2(EncTable[2].index1))
+	// closed loop - output in counts - 10.000 counts per rev - 0.036 deg/count
+EncTable[12].type=1
+EncTable[12].pEnc=PowerBrick[0].Chan[1].ServoCapt.a
+EncTable[12].pEnc1=Sys.pushm
+EncTable[12].MaxDelta=0
+EncTable[12].index1=0
+EncTable[12].index2=0
+EncTable[12].index3=0
+EncTable[12].index4=0
+EncTable[12].index5=0
+EncTable[12].index6=0
+EncTable[12].ScaleFactor=(1/256) // Conversion ServoCapt to encoder counts
+
+// Motor 2
+#define Motor2Microstepping 512
+#define Motor2StepAngle 1.8
+#define Enc2CountsPerRev 1000
+Motor[2].pAbsPos = PowerBrick[0].Chan[1].PhaseCapt.a
+Motor[2].ServoCtrl = 1
+Motor[2].AdcMask = $FFFC0000;
+Motor[2].pLimits = PowerBrick[0].Chan[1].Status.a
+Motor[2].AmpFaultLevel = 1
+Motor[2].PhasePosSf = 0
+Motor[2].pAbsPhasePos = PowerBrick[0].Chan[1].PhaseCapt.a
+Motor[2].PhaseOffset = MOT2_DIRECTION * 512
+Motor[2].PhaseCtrl = 6
+Motor[2].PhaseMode = 1
+Motor[2].PowerOnMode = 6
+Motor[2].FatalFeLimit = 400000
+Motor[2].WarnFeLimit = Motor[2].FatalFeLimit/5
+Motor[2].Servo.MaxPosErr= Motor[2].FatalFeLimit*5
+Motor[2].SlipGain = Sys.PhaseOverServoPeriod / (Motor[2].Stime + 1) // Used for direct micro stepping or encoder positioned on the load
+
+//Motor[2].PosSf = 0.997
+
+Motor[2].pEnc = EncTable[2].a
+Motor[2].pEnc2 = EncTable[2].a
+Motor[2].IiGain=0.9402914
+Motor[2].IpfGain=0
+Motor[2].IpbGain=5.299984
+Motor[2].Servo.Kp=0.85
+Motor[2].Servo.Kvfb=0
+Motor[2].Servo.Kvifb = 0
+Motor[2].Servo.Ki=0
+Motor[2].Servo.Kvff=10.24
+Motor[2].Servo.Kviff = 0
+Motor[2].Servo.Kaff=0
+Motor[2].JogSpeed = 10000
+Motor[2].JogTa = 1500
+Motor[2].JogTs = 0
+Motor[2].HomeVel = 512
+Motor[2].AbortTa = 1
+Motor[2].AbortTs = 0.2
+Motor[2].AdvGain = 0.078126326 //1/16*Sys.PhaseOverServoPeriod*(0.25/Sys.ServoPeriod/Sys.PhaseOverServoPeriod)
+Motor[2].Servo.MaxInt=28000
+
+// Driving motor as hybrid - to drive the motor in open loop, comment the following lines
+Motor[2].pLimits = PowerBrick[0].Chan[1].Status.a;
+Motor[2].DtOverRotorTc = 0
+Motor[2].SlipGain = Sys.PhaseOverServoPeriod;
+Motor[2].pEnc = EncTable[12].a
+Motor[2].pEnc2 = EncTable[12].a
+Motor[2].FatalFeLimit = 40000
+Motor[2].WarnFeLimit = Motor[2].FatalFeLimit/5
+Motor[2].Servo.MaxPosErr= Motor[2].FatalFeLimit*5
+//Motor[2].Servo.Kp=0.0085
+Motor[2].Servo.Kp=0.007
+Motor[2].Servo.Kvfb=0
+Motor[2].Servo.Kvifb = 0
+Motor[2].Servo.Ki=2.0000009e-8
+Motor[2].Servo.Kvff=1
+Motor[2].Servo.Kviff = 0
+Motor[2].Servo.Kaff=0
+Motor[2].MaxSpeed = 0
+Motor[2].JogSpeed = 100
+Motor[2].JogTa = 100 //1500
+Motor[2].JogTs = 0 //150
+Motor[2].HomeVel = 40
+Motor[2].AbortTa = 1
+Motor[2].AbortTs = 0.2
+Motor[2].InPosBand = 5
+Motor[2].AbsPhasePosOffset = 2048/6
+Motor[2].PowerOnMode = 0
+Motor[2].BlSlewRate = 0
+
+Motor2Homed = 0

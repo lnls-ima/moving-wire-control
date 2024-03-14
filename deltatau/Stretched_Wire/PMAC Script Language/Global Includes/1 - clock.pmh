@@ -1,0 +1,22 @@
+// Clocks
+Sys.WpKey = $AAAAAAAA
+Sys.MaxCoords = 4
+Sys.MaxMotors = 16
+
+PowerBrick[0].PhaseFreq = 10000
+PowerBrick[0].ServoClockDiv = 1
+PowerBrick[1].PhaseFreq = 10000
+PowerBrick[1].ServoClockDiv = 1 // fservo = fphase/(1+servoclockdiv)
+Sys.RtIntPeriod = 0
+Sys.ServoPeriod = 1000 * (PowerBrick[0].ServoClockDiv + 1) / PowerBrick[0].PhaseFreq
+Sys.PhaseOverServoPeriod = 1 / (PowerBrick[0].ServoClockDiv + 1)
+
+// fpwm = fphase*(pwmfreqmult + 1)/2 = 2*fphase
+PowerBrick[0].Chan[0].PwmFreqMult = 3
+PowerBrick[0].Chan[1].PwmFreqMult = 3 
+PowerBrick[0].Chan[2].PwmFreqMult = 3
+PowerBrick[0].Chan[3].PwmFreqMult = 3 
+PowerBrick[1].Chan[0].PwmFreqMult = 3
+PowerBrick[1].Chan[1].PwmFreqMult = 3
+
+

@@ -31,7 +31,7 @@ from movingwire.gui.utils import (
     )
 from movingwire.devices import ppmac as _ppmac
 import movingwire.data as _data
-
+from movingwire.gui.motorstatusdialog import MotorStatus as _MotorStatus
 
 class PpmacWidget(_QWidget):
     """PPMAC widget class for the Moving Wire Control application."""
@@ -68,7 +68,6 @@ class PpmacWidget(_QWidget):
         self.update_cfg_from_ui()
         self.connect_signal_slots()
 
-
     def init_tab(self):
         name = self.ui.cmb_cfg_name.currentText()
         _load_db_from_name(self.cfg, name)
@@ -103,7 +102,7 @@ class PpmacWidget(_QWidget):
         self.ui.pbt_home.clicked.connect(self.home)
         self.ui.pbt_home_x.clicked.connect(self.home_x)
         self.ui.pbt_home_y.clicked.connect(self.home_y)
-        self.ui.pbt_configure.clicked.connect(self.configure_ppmac)
+        self.ui.pbt_configure.clicked.connect(self.configuration_button)
         self.ui.pbt_save_cfg.clicked.connect(self.save_cfg)
         self.ui.pbt_load_cfg.clicked.connect(self.load_cfg)
         self.ui.pbt_update_cfg.clicked.connect(self.update_cfg_list)
@@ -115,6 +114,14 @@ class PpmacWidget(_QWidget):
         self.ui.pbt_mount_pos_lim.clicked.connect(self.mount_pos_lim)
         self.ui.pbt_clear_faults.clicked.connect(self.clear_faults)
         self.ui.pbt_wire_tension.clicked.connect(self.wire_tension_dialog)
+        self.ui.pbt_status.clicked.connect(self.status_button)
+
+    def status_button(self):
+        self.statuswindow = _MotorStatus(self.parent_window.motors)
+        try:
+            self.statuswindow.show()
+        except Exception:
+            _traceback.print_exc(file=_sys.stdout)
 
     def enable_moving_buttons(self, state=True):
         self.ui.pbt_move_xy.setEnabled(state)
@@ -127,6 +134,13 @@ class PpmacWidget(_QWidget):
         self.ui.pbt_mount_neg_lim.setEnabled(state)
         self.ui.pbt_mount_pos_lim.setEnabled(state)
         self.ui.pbt_clear_faults.setEnabled(state)
+        self.ui.pbt_status.setEnabled(state)
+
+    def configuration_button(self):
+        self.configure_ppmac()
+        _QMessageBox.information(self, 'Information',
+                                 'PPMAC configured.',
+                                 _QMessageBox.Ok)
 
     def update_position(self):
         """Updates position displays on ui."""
@@ -145,6 +159,7 @@ class PpmacWidget(_QWidget):
                         self.pos[3]*self.cfg.x_sf - self.cfg.x_offset)
                     self.ui.lcd_pos4.display(
                         self.pos[2]*self.cfg.y_sf - self.cfg.y_offset)
+
                     # self.ui.lcd_pos5.display(self.pos[4]*self.angular_sf)
                     # self.ui.lcd_pos6.display(self.pos[5]*self.angular_sf)
                     _QApplication.processEvents()
@@ -386,18 +401,18 @@ class PpmacWidget(_QWidget):
             _ppmac.read()
 
             # Checks fiducialization parameters
-            xa_comp_pos = int(_ppmac.query_motor_param(2, 'CompPos'))
-            xb_comp_pos = int(_ppmac.query_motor_param(4, 'CompPos'))
-            self.load_fiduc_cfg()
-            if any([xa_comp_pos != int(self.fiduc_cfg.offset_xa),
-                    xb_comp_pos != int(self.fiduc_cfg.offset_xb)]):
-                _QMessageBox.warning(self, 'Warning',
-                                     'Fiducialization parameters are wrong;'
-                                     ' Please home the X axis.',
-                                     _QMessageBox.Ok)
-            _QMessageBox.information(self, 'Information',
+            # xa_comp_pos = int(_ppmac.query_motor_param(2, 'CompPos'))
+            # xb_comp_pos = int(_ppmac.query_motor_param(4, 'CompPos'))
+            # self.load_fiduc_cfg()
+            # if any([xa_comp_pos != int(self.fiduc_cfg.offset_xa),
+            #         xb_comp_pos != int(self.fiduc_cfg.offset_xb)]):
+            #     _QMessageBox.warning(self, 'Warning',
+            #                          'Fiducialization parameters are wrong;'
+            #                          ' Please home the X axis.',
+            #                          _QMessageBox.Ok)
+            '''_QMessageBox.information(self, 'Information',
                                      'PPMAC configured.',
-                                     _QMessageBox.Ok)
+                                     _QMessageBox.Ok)'''
 
             # checks homing
             self.check_homed()
@@ -452,7 +467,7 @@ class PpmacWidget(_QWidget):
             True if successfull;
             False otherwise."""
         try:
-            #Progress Dialog during the homing process
+            # Progress Dialog during the homing process
             _ans = _QMessageBox.question(self, 'Attention', 'Do you want to '
                                          'home the X axis?',
                                          _QMessageBox.Yes |
@@ -461,14 +476,14 @@ class PpmacWidget(_QWidget):
             if _ans == _QMessageBox.No:
                 return False
 
-            #Set the hioming jog speed at 2mm/s
+            # Set the hioming jog speed at 2mm/s
             _ppmac.set_motor_param(2, 'JogSpeed', 100)
-            _ppmac.set_motor_param(4, 'JogSpeed', 100)
+            _ppmac.set_motor_param(4, 'JogSpeed', 50)
 
             xnofsteps = 4
             xactualstep = 0
             _prg_dialog = _QProgressDialog('Homing process in progress...', 'Abort', 0,
-                                               xnofsteps, self)
+                                           xnofsteps, self)
             _prg_dialog.setWindowTitle('Homing X axis')
             _prg_dialog.show()
             _QApplication.processEvents()
@@ -597,14 +612,14 @@ class PpmacWidget(_QWidget):
             if _ans == _QMessageBox.No:
                 return False
 
-            #Set the homing jog speed at 2mm/s
+            # Set the homing jog speed at 2mm/s
             _ppmac.set_motor_param(1, 'JogSpeed', 100)
             _ppmac.set_motor_param(3, 'JogSpeed', 100)
 
             ynofsteps = 4
             yactualstep = 0
-            _prg_dialog = _QProgressDialog('Homing process in progress...', 'Abort', 0,
-                                               ynofsteps, self)
+            _prg_dialog = _QProgressDialog('Homing process in progress...',
+                                           'Abort', 0, ynofsteps, self)
             _prg_dialog.setWindowTitle('Homing Y axis')
             _prg_dialog.show()
             _QApplication.processEvents()
@@ -747,7 +762,12 @@ class PpmacWidget(_QWidget):
         try:
             _x_lim = [self.cfg.min_x + self.cfg.x_offset,
                       self.cfg.max_x + self.cfg.x_offset]  # [mm]
-            _pos_x = position + self.cfg.x_offset  # [mm] *10**-3/self.cfg.x_sf
+            if absolute:
+                _mode = '='
+                _pos_x = position + self.cfg.x_offset  # [mm] *10**-3/self.cfg.x_sf
+            else:
+                _mode = '^'
+                _pos_x = position
             _status = False
 
             if _x_lim[0] <= _pos_x <= _x_lim[1]:
@@ -758,16 +778,11 @@ class PpmacWidget(_QWidget):
                                      _QMessageBox.Ok)
                 return False
 
-            if absolute:
-                _mode = '='
-            else:
-                _mode = '^'
-
             self.update_flag = False
             self.timer.stop()
             # _sleep(0.2)
 
-            print('X position: {0}'.format(_pos_x))
+            # print('X position: {0}'.format(_pos_x))
 
             if not (motor in [2, 4]):
                 if m_mode == 1:
@@ -781,16 +796,20 @@ class PpmacWidget(_QWidget):
                     # Only configures the motor
                     _ppmac.set_motor_param(2, 'ProgJogPos', _pos_x)
                     _ppmac.set_motor_param(4, 'ProgJogPos', _pos_x)
-                    _rb_pos_m2 = int(_ppmac.query_motor_param(2, 'ProgJogPos'))
-                    _rb_pos_m4 = int(_ppmac.query_motor_param(4, 'ProgJogPos'))
-                    if not all([(_pos_x - 0.1 < _rb_pos_m2 < _pos_x + 0.1),
-                                (_pos_x - 0.1 < _rb_pos_m4 < _pos_x + 0.1)]):
+                    _rb_sp_m2 = int(_ppmac.query_motor_param(2, 'ProgJogPos'))
+                    _rb_sp_m4 = int(_ppmac.query_motor_param(4, 'ProgJogPos'))
+                    if not all([(_pos_x - 0.1 < _rb_sp_m2 < _pos_x + 0.1),
+                                (_pos_x - 0.1 < _rb_sp_m4 < _pos_x + 0.1)]):
                         raise ValueError(
                             'move_x tried to set {0},'.format(_pos_x),
                             ' {1} steps but {2}, {3} were set.'.format(_pos_x,
-                                                       _rb_pos_m2, _rb_pos_m4))
+                                                       _rb_sp_m2, _rb_sp_m4))
                     return True
                 elif m_mode == 3:
+                    # reads initial position [mm]
+                    _initial_pos_m2, _initial_pos_m4 = \
+                        _ppmac.read_motor_pos([2, 4])*self.cfg.x_sf
+
                     # Triggers movement with previously configured steps
                     _ppmac.write('#1,3,5,6k')
                     _ppmac.write('#2,4j/')
@@ -798,7 +817,35 @@ class PpmacWidget(_QWidget):
                     _ppmac.write(_msg_x)
                     _ppmac.read()
 
+                    # reads setpoints [mm]
+                    _sp_pos_m2 = self.cfg.x_sf*int(
+                        _ppmac.query_motor_param(2, 'ProgJogPos'))
+                    _sp_pos_m4 = self.cfg.x_sf*int(
+                        _ppmac.query_motor_param(4, 'ProgJogPos'))
+
+                    # finds movement direction
+                    if absolute:
+                        _dir_m2 = _np.sign(_sp_pos_m2 - _initial_pos_m2)
+                        _dir_m4 = _np.sign(_sp_pos_m4 - _initial_pos_m4)
+                    else:
+                        _dir_m2 = _np.sign(_sp_pos_m2)
+                        _dir_m4 = _np.sign(_sp_pos_m4)
+
+                    # find movement limits
+                    # (adds 1mm to the setpoint in the moving direction)
+                    if absolute:
+                        _limit_m2 = _sp_pos_m2 + _dir_m2*1
+                        _limit_m4 = _sp_pos_m4 + _dir_m4*1
+                    else:
+                        _limit_m2 = _initial_pos_m2 + _sp_pos_m2 + _dir_m2*1
+                        _limit_m4 = _initial_pos_m4 + _sp_pos_m4 + _dir_m4*1
+
+                    # finds maximum position difference from start point
+                    _delta_m2 = abs(_limit_m2 - _initial_pos_m2)
+                    _delta_m4 = abs(_limit_m4 - _initial_pos_m4)
+
                 _sleep(0.2)
+
                 while (not all([self.ppmac.motor_stopped(2),
                                 self.ppmac.motor_stopped(4)])):
                     self.pos = _ppmac.read_motor_pos([1, 2, 3, 4, 7, 8])
@@ -807,10 +854,21 @@ class PpmacWidget(_QWidget):
                         # checks if the stages are not out of bounds:
                         _pos_m2 = self.pos[1]*self.cfg.x_sf
                         _pos_m4 = self.pos[3]*self.cfg.x_sf
-                        if not all([(_x_lim[0] <= _pos_m2 <= _x_lim[1]),
+
+                        # if not all([(_x_lim[0] <= _pos_m2 <= _x_lim[1]),
+                        #             (_x_lim[0] <= _pos_m4 <= _x_lim[1])]):
+                        if not all([(abs(_pos_m2 - _initial_pos_m2) > _delta_m2),
+                                    (abs(_pos_m4 - _initial_pos_m4) > _delta_m4),
+                                    (_x_lim[0] <= _pos_m2 <= _x_lim[1]),
                                     (_x_lim[0] <= _pos_m4 <= _x_lim[1])]):
-                            print(_pos_m2, _pos_m4)
                             _ppmac.stop_motors()
+                            _ppmac.flag_abort = False
+                            _rb_sp_m2 = int(
+                                _ppmac.query_motor_param(2, 'ProgJogPos'))
+                            _rb_sp_m4 = int(
+                                _ppmac.query_motor_param(4, 'ProgJogPos'))
+                            print(_pos_m2, _pos_m4)
+                            print(_pos_x, _rb_sp_m2, _rb_sp_m4)
                             raise RuntimeError('move_x: positions out of '
                                                'limits. Motors stopped.')
                     _sleep(0.1)
@@ -824,11 +882,11 @@ class PpmacWidget(_QWidget):
                     _status = True
 
             else:
-                _ppmac.write('#1,3,5,6k')
-                _ppmac.write('#{0}j/'.format(motor))
-                _msg_x = '#{0}j'.format(motor) + _mode + str(_pos_x)
-                _ppmac.write(_msg_x)
-                _ppmac.read()
+                # _ppmac.write('#1,3,5,6k')
+                # _ppmac.write('#{0}j/'.format(motor))
+                # _msg_x = '#{0}j'.format(motor) + _mode + str(_pos_x)
+                # _ppmac.write(_msg_x)
+                # _ppmac.read()
                 if m_mode == 1:
                     # Normal operating mode
                     _ppmac.write('#1,3,5,6k')
@@ -840,14 +898,14 @@ class PpmacWidget(_QWidget):
                     # Only configures the motor
                     _ppmac.set_motor_param(2, 'ProgJogPos', _pos_x)
                     _ppmac.set_motor_param(4, 'ProgJogPos', _pos_x)
-                    _rb_pos_m2 = int(_ppmac.query_motor_param(2, 'ProgJogPos'))
-                    _rb_pos_m4 = int(_ppmac.query_motor_param(4, 'ProgJogPos'))
-                    if not all([(_pos_x - 0.1 < _rb_pos_m2 < _pos_x + 0.1),
-                                (_pos_x - 0.1 < _rb_pos_m4 < _pos_x + 0.1)]):
+                    _rb_sp_m2 = int(_ppmac.query_motor_param(2, 'ProgJogPos'))
+                    _rb_sp_m4 = int(_ppmac.query_motor_param(4, 'ProgJogPos'))
+                    if not all([(_pos_x - 0.1 < _rb_sp_m2 < _pos_x + 0.1),
+                                (_pos_x - 0.1 < _rb_sp_m4 < _pos_x + 0.1)]):
                         raise ValueError(
                             'move_y tried to set {0},'.format(_pos_x),
                             ' {1} steps but {2}, {3} were set.'.format(_pos_x,
-                                                       _rb_pos_m2, _rb_pos_m4))
+                                                       _rb_sp_m2, _rb_sp_m4))
                     return True
                 elif m_mode == 3:
                     # Triggers movement with previously configured steps
@@ -859,7 +917,9 @@ class PpmacWidget(_QWidget):
 
                 _sleep(0.2)
                 while not self.ppmac.motor_stopped(motor):
-                    _sleep(0.2)
+                    self.update_flag = True
+                    self.update_position()
+                    _sleep(0.5)
 
                 if not _ppmac.motor_fault(motor):
                     _status = True
@@ -897,7 +957,12 @@ class PpmacWidget(_QWidget):
         try:
             _y_lim = [self.cfg.min_y + self.cfg.y_offset,
                       self.cfg.max_y + self.cfg.y_offset]  # [mm]
-            _pos_y = position + self.cfg.y_offset  # [mm] *10**-3/self.cfg.y_sf
+            if absolute:
+                _mode = '='
+                _pos_y = position + self.cfg.y_offset  # [mm] *10**-3/self.cfg.y_sf
+            else:
+                _mode = '^'
+                _pos_y = position
             _status = False
 
             if _y_lim[0] <= _pos_y <= _y_lim[1]:
@@ -908,16 +973,11 @@ class PpmacWidget(_QWidget):
                                      _QMessageBox.Ok)
                 return False
 
-            if absolute:
-                _mode = '='
-            else:
-                _mode = '^'
-
             self.update_flag = False
             self.timer.stop()
             # _sleep(0.2)
 
-            print('Y position: {0}'.format(_pos_y))
+            # print('Y position: {0}'.format(_pos_y))
 
             if not (motor in [1, 3]):
                 if m_mode == 1:
@@ -931,22 +991,53 @@ class PpmacWidget(_QWidget):
                     # Only configures the motor
                     _ppmac.set_motor_param(1, 'ProgJogPos', _pos_y)
                     _ppmac.set_motor_param(3, 'ProgJogPos', _pos_y)
-                    _rb_pos_m1 = int(_ppmac.query_motor_param(1, 'ProgJogPos'))
-                    _rb_pos_m3 = int(_ppmac.query_motor_param(3, 'ProgJogPos'))
-                    if not all([(_pos_y - 0.1 < _rb_pos_m1 < _pos_y + 0.1),
-                                (_pos_y - 0.1 < _rb_pos_m3 < _pos_y + 0.1)]):
+                    _rb_sp_m1 = int(_ppmac.query_motor_param(1, 'ProgJogPos'))
+                    _rb_sp_m3 = int(_ppmac.query_motor_param(3, 'ProgJogPos'))
+                    if not all([(_pos_y - 0.1 < _rb_sp_m1 < _pos_y + 0.1),
+                                (_pos_y - 0.1 < _rb_sp_m3 < _pos_y + 0.1)]):
                         raise ValueError(
                             'move_y tried to set {0},'.format(_pos_y),
                             ' {1} steps but {2}, {3} were set.'.format(_pos_y,
-                                                       _rb_pos_m1, _rb_pos_m3))
+                                                       _rb_sp_m1, _rb_sp_m3))
                     return True
                 elif m_mode == 3:
+                    # reads initial position [mm]
+                    _initial_pos_m1, _initial_pos_m3 = \
+                        _ppmac.read_motor_pos([1, 3])*self.cfg.x_sf
+
                     # Triggers movement with previously configured steps
                     _ppmac.write('#2,4,5,6k')
                     _ppmac.write('#1,3j/')
                     _msg_y = '#1,3j{0}*'.format(_mode)
                     _ppmac.write(_msg_y)
                     _ppmac.read()
+
+                    # reads setpoints [mm]
+                    _sp_pos_m1 = self.cfg.x_sf*int(
+                        _ppmac.query_motor_param(1, 'ProgJogPos'))
+                    _sp_pos_m3 = self.cfg.x_sf*int(
+                        _ppmac.query_motor_param(3, 'ProgJogPos'))
+
+                    # finds movement direction
+                    if absolute:
+                        _dir_m1 = _np.sign(_sp_pos_m1 - _initial_pos_m1)
+                        _dir_m3 = _np.sign(_sp_pos_m3 - _initial_pos_m3)
+                    else:
+                        _dir_m1 = _np.sign(_sp_pos_m1)
+                        _dir_m3 = _np.sign(_sp_pos_m3)
+
+                    # find movement limits
+                    # (adds 1mm to the setpoint in the moving direction)
+                    if absolute:
+                        _limit_m1 = _sp_pos_m1 + _dir_m1*1
+                        _limit_m3 = _sp_pos_m3 + _dir_m3*1
+                    else:
+                        _limit_m1 = _initial_pos_m1 + _sp_pos_m1 + _dir_m1*1
+                        _limit_m3 = _initial_pos_m3 + _sp_pos_m3 + _dir_m3*1
+
+                    # finds maximum position difference from start point
+                    _delta_m1 = abs(_limit_m1 - _initial_pos_m1)
+                    _delta_m3 = abs(_limit_m3 - _initial_pos_m3)
 
                 _sleep(0.2)
                 while (not all([self.ppmac.motor_stopped(1),
@@ -957,10 +1048,21 @@ class PpmacWidget(_QWidget):
                         # checks if the stages are not out of bounds:
                         _pos_m1 = self.pos[0]*self.cfg.y_sf
                         _pos_m3 = self.pos[2]*self.cfg.y_sf
-                        if not all([(_y_lim[0] <= _pos_m1 <= _y_lim[1]),
+
+                        # if not all([(_y_lim[0] <= _pos_m1 <= _y_lim[1]),
+                        #             (_y_lim[0] <= _pos_m3 <= _y_lim[1])]):
+                        if not all([(abs(_pos_m1 - _initial_pos_m1) > _delta_m1),
+                                    (abs(_pos_m3 - _initial_pos_m3) > _delta_m3),
+                                    (_y_lim[0] <= _pos_m1 <= _y_lim[1]),
                                     (_y_lim[0] <= _pos_m3 <= _y_lim[1])]):
-                            print(_pos_m1, _pos_m3)
                             _ppmac.stop_motors()
+                            _ppmac.flag_abort = False
+                            _rb_sp_m1 = int(
+                                _ppmac.query_motor_param(1, 'ProgJogPos'))
+                            _rb_sp_m3 = int(
+                                _ppmac.query_motor_param(3, 'ProgJogPos'))
+                            print(_pos_m1, _pos_m3)
+                            print(_pos_y, _rb_sp_m1, _rb_sp_m3)
                             raise RuntimeError('move_y: positions out of '
                                                'limits. Motors stopped.')
                     _sleep(0.1)
@@ -974,11 +1076,11 @@ class PpmacWidget(_QWidget):
                     _status = True
 
             else:
-                _ppmac.write('#2,4,5,6k')
-                _ppmac.write('#{0}j/'.format(motor))
-                _msg_y = '#{0}j'.format(motor) + _mode + str(_pos_y)
-                _ppmac.write(_msg_y)
-                _ppmac.read()
+                # _ppmac.write('#2,4,5,6k')
+                # _ppmac.write('#{0}j/'.format(motor))
+                # _msg_y = '#{0}j'.format(motor) + _mode + str(_pos_y)
+                # _ppmac.write(_msg_y)
+                # _ppmac.read()
                 if m_mode == 1:
                     # Normal operating mode
                     _ppmac.write('#2,4,5,6k')
@@ -990,14 +1092,14 @@ class PpmacWidget(_QWidget):
                     # Only configures the motor
                     _ppmac.set_motor_param(1, 'ProgJogPos', _pos_y)
                     _ppmac.set_motor_param(3, 'ProgJogPos', _pos_y)
-                    _rb_pos_m1 = int(_ppmac.query_motor_param(1, 'ProgJogPos'))
-                    _rb_pos_m3 = int(_ppmac.query_motor_param(3, 'ProgJogPos'))
-                    if not all([(_pos_y - 0.1 < _rb_pos_m1 < _pos_y + 0.1),
-                                (_pos_y - 0.1 < _rb_pos_m3 < _pos_y + 0.1)]):
+                    _rb_sp_m1 = int(_ppmac.query_motor_param(1, 'ProgJogPos'))
+                    _rb_sp_m3 = int(_ppmac.query_motor_param(3, 'ProgJogPos'))
+                    if not all([(_pos_y - 0.1 < _rb_sp_m1 < _pos_y + 0.1),
+                                (_pos_y - 0.1 < _rb_sp_m3 < _pos_y + 0.1)]):
                         raise ValueError(
                             'move_y tried to set {0},'.format(_pos_y),
                             ' {1} steps but {2}, {3} were set.'.format(_pos_y,
-                                                       _rb_pos_m1, _rb_pos_m3))
+                                                       _rb_sp_m1, _rb_sp_m3))
                     return True
                 elif m_mode == 3:
                     # Triggers movement with previously configured steps
@@ -1009,7 +1111,9 @@ class PpmacWidget(_QWidget):
 
                 _sleep(0.2)
                 while not self.ppmac.motor_stopped(motor):
-                    _sleep(0.2)
+                    self.update_flag = True
+                    self.update_position()
+                    _sleep(0.5)
 
                 if not _ppmac.motor_fault(motor):
                     _status = True
@@ -1070,15 +1174,25 @@ class PpmacWidget(_QWidget):
             if _ans == _QMessageBox.No:
                 return False
 
+        self.configure_ppmac()
+
         self.update_flag = False
-        _sleep(0.4)
+        _sleep(0.5)
         self.enable_moving_buttons(False)
         position = self.ui.dsb_pos_x.value()
         if self.ui.rdb_abs_xy.isChecked():
             absolute = True
         else:
             absolute = False
-        self.move_x(position, absolute)
+
+        # Check if a single motor is selected
+        if self.ui.cmb_x_selection.currentText() == "Xa":
+            self.move_x(position, absolute, motor=2)
+        elif self.ui.cmb_x_selection.currentText() == "Xb":
+            self.move_x(position, absolute, motor=4)
+        elif self.ui.cmb_x_selection.currentText() == "X":
+            self.move_x(position, absolute)
+
         self.enable_moving_buttons(True)
 
     def move_y_ui(self):
@@ -1096,15 +1210,25 @@ class PpmacWidget(_QWidget):
             if _ans == _QMessageBox.No:
                 return False
 
-        self.update_flag = False
-        _sleep(0.4)
         self.enable_moving_buttons(False)
         position = self.ui.dsb_pos_y.value()
         if self.ui.rdb_abs_xy.isChecked():
             absolute = True
         else:
             absolute = False
-        self.move_y(position, absolute)
+
+        self.configure_ppmac()
+
+        self.update_flag = False
+        _sleep(0.5)
+        #Check if a single motor is selected
+        if self.ui.cmb_y_selection.currentText() == "Ya":
+            self.move_y(position, absolute, motor=1)
+        elif self.ui.cmb_y_selection.currentText() == "Yb":
+            self.move_y(position, absolute, motor=3)
+        elif self.ui.cmb_y_selection.currentText() == "Y":
+            self.move_y(position, absolute)
+
         self.enable_moving_buttons(True)
 
     def mount_neg_lim(self):
@@ -1295,15 +1419,15 @@ class PpmacWidget(_QWidget):
         try:
             self.update_flag = False
             self.timer.stop()
-            _sleep(0.2)
+            _sleep(0.6)
             if all([_ppmac.motor_homed(2),
                     _ppmac.motor_homed(4)]):
                 homed = True
             else:
-                _QMessageBox.warning(self, 'Warning',
-                                     'X axis motors are not homed. Please '
-                                     'run the X homing routine.',
-                                     _QMessageBox.Ok)
+                # _QMessageBox.warning(self, 'Warning',
+                #                      'X axis motors are not homed. Please '
+                #                      'run the X homing routine.',
+                #                      _QMessageBox.Ok)
                 homed = False
             _sleep(0.2)
             self.update_flag = True
@@ -1325,15 +1449,15 @@ class PpmacWidget(_QWidget):
         try:
             self.update_flag = False
             self.timer.stop()
-            _sleep(0.4)
+            _sleep(0.6)
             if all([_ppmac.motor_homed(1),
                     _ppmac.motor_homed(3)]):
                 homed = True
             else:
-                _QMessageBox.warning(self, 'Warning',
-                                     'Y axis motors are not homed. Please '
-                                     'run the Y homing routine.',
-                                     _QMessageBox.Ok)
+                # _QMessageBox.warning(self, 'Warning',
+                #                      'Y axis motors are not homed. Please '
+                #                      'run the Y homing routine.',
+                #                      _QMessageBox.Ok)
                 homed = False
             _sleep(0.2)
             self.update_flag = True
@@ -1357,6 +1481,10 @@ class PpmacWidget(_QWidget):
                     self.check_y_homed()]):
                 return True
             else:
+                _QMessageBox.warning(self, 'Warning',
+                                     'Motors are not homed. Please '
+                                     'run the homing routine.',
+                                     _QMessageBox.Ok)
                 return False
         except Exception:
             # _traceback.print_exc(file=_sys.stdout)

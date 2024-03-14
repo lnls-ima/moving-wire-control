@@ -1,0 +1,39 @@
+Open prog 1
+local aux=0; 
+Abs // Absolute Position Mode 
+rapid // Rapid Move Mode 
+TM 100
+TA (acce)
+TS 0
+F 1
+//PowerBrick[0].Chan[0].CompA = ((Motor[1].Homepos+CompAPos)%1048576)*4096
+//PowerBrick[0].Chan[0].CompB = ((Motor[1].Homepos+CompBPos)%1048576)*4096
+PowerBrick[0].Chan[2].CompA = ((Motor[3].Homepos+ComparePos)%1048576)*4096
+PowerBrick[0].Chan[2].CompB = ((Motor[3].Homepos+ComparePos-100)%1048576)*4096
+PowerBrick[0].Chan[2].CompAdd = (CompAddDist%1048576)*4096
+dwell 0 
+PowerBrick[0].Chan[2].EquWrite=$1;
+dwell 0
+
+//Gather.Addr[0]=Sys.ServoCount.a
+//Gather.Addr[1]=Motor[1].ActPos.a
+//Gather.Addr[2]=Motor[3].ActPos.a
+//Gather.Addr[3]=PowerBrick[0].Chan[0].EquOut
+//Gather.Items=4
+//Gather.Period=1
+//Gather.MaxSamples=2147483647
+
+gather.enable = 2; 
+dwell 0
+while(aux < n_scans){
+	dwell 1000
+	X(distance)
+	dwell 1000
+	X0
+	aux = aux + 1
+}
+dwell 1000
+gather.enable = 0; 
+PowerBrick[0].Chan[2].EquWrite=$1; 
+dwell 0
+close

@@ -1,0 +1,16 @@
+Motor[7].I2tSet=5065.333
+Motor[7].I2tTrip=35234684
+Motor[7].AdcMask=$fffc0000
+Motor[7].PhaseOffset=-512
+Motor[7].PwmSf=15237
+Motor[7].MaxDac=7803.3506
+Motor[7].pPhaseEnc=PowerBrick[1].Chan[0].PhaseCapt.a
+Motor[7].pEnc2=EncTable[12].a
+Motor[7].PhaseFindingTime=256
+Motor[7].pEnc=EncTable[12].a
+Motor[7].Control[0]=$16000100
+Motor[7].ServoCtrl=1
+Motor[7].PhaseCtrl=6
+Motor[7].PhaseSplineCtrl=0
+Motor[7].AmpFaultLevel=1
+Motor[7].HomeOffset = -31860

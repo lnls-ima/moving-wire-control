@@ -1,0 +1,78 @@
+//Motor5
+//HomeOffset = -31860 encoder counts
+
+#define MOT5_DIRECTION 1
+
+PowerBrick[1].Chan[0].InCtrl=$43
+PowerBrick[1].Chan[0].OutCtrl=$f300001
+PowerBrick[1].Chan[0].PackInData=0
+PowerBrick[1].Chan[0].EncCtrl=3
+PowerBrick[1].Chan[0].PackOutData=0
+PowerBrick[1].Chan[0].PwmFreqMult=3
+
+Gate3[1].EncClockDiv = 1
+Gate3[1].Chan[0].EncCtrl = 7 // 3: x4 quadrature decode CW. 7: x4 quadrature decode CCW
+BrickLV.Chan[4].TwoPhaseMode = 1
+
+Motor[5].Servo.Kp=1
+Motor[5].Servo.Kvfb=0
+Motor[5].Servo.Kvff=1
+Motor[5].Servo.Kaff=1
+Motor[5].Servo.Ki=0
+Motor[5].PhasePosSf=0.0
+Motor[5].IdCmd=2532.6665
+Motor[5].IaBias=1
+Motor[5].IbBias=-1
+Motor[5].SlipGain=0.5
+Motor[5].IiGain=0.18244858
+Motor[5].IpfGain=0
+Motor[5].IpbGain=1.412397
+Motor[5].AdvGain=0.078126326
+Motor[5].JogTa=-10
+Motor[5].JogTs=-50
+Motor[5].JogSpeed=102.4
+Motor[5].InvAmax = 0.1
+Motor[5].FatalFeLimit=370000
+Motor[5].I2tSet=5065.333
+Motor[5].I2tTrip=466018
+Motor[5].AdcMask=$fffc0000
+Motor[5].PhaseOffset=512
+Motor[5].PwmSf=MOT5_DIRECTION*15237
+Motor[5].MaxDac=682.65509
+Motor[5].MaxSpeed = 0
+Motor[5].pEnc2=EncTable[15].a
+Motor[5].LimitBits=0
+Motor[5].pLimits=0
+Motor[5].pAbsPhasePos=PowerBrick[1].Chan[0].PhaseCapt.a
+Motor[5].pEnc=EncTable[15].a
+Motor[5].Control[0]=$16002110
+Motor[5].ServoCtrl=1
+Motor[5].PhaseCtrl=6
+Motor[5].PowerOnMode=2
+Motor[5].PhaseSplineCtrl=0
+Motor[5].AmpFaultLevel=1
+Motor[5].PhaseMode=1
+Motor[5].BlSize=12
+Motor[5].BlSlewRate=1
+Motor[5].HomeVel = -10
+
+Motor5Homed = 0
+
+//Closed Loop EncTable
+EncTable[5].type=1
+EncTable[5].index1=0
+EncTable[5].index2=0
+EncTable[5].index3=0
+EncTable[5].index4=0
+EncTable[5].index5=0
+EncTable[5].index6=0
+EncTable[5].pEnc=PowerBrick[1].Chan[0].ServoCapt.a
+EncTable[5].ScaleFactor=(1/256)
+
+//Open Loop EncTable
+EncTable[15].type=11
+EncTable[15].index1=5
+EncTable[15].index2=0
+EncTable[15].index5=255
+EncTable[15].pEnc=Motor[5].PhasePos.a
+EncTable[15].ScaleFactor=4.76837158203125e-7

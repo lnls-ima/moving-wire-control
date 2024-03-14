@@ -1,0 +1,45 @@
+// This script only works if called on startup, for this call on pp_startup.txt:
+// enable plc PowerOnResetPLC
+OPEN PLC PowerOnResetPLC // opening of the Power On script
+
+Sys.WDTReset = 5000 / (Sys.ServoPeriod * 2.258) //This is a background monitoring feature that is intended to detect a software overload of the processor that could prevent safe control, and provide a shutdown mechanism. The default value would be 5000 cycles, giving time to the controller to stabilize before a load of commands.
+CALL Timer(0.005) //A time delay function is called in order to give time to signals to be received to avoid any error (In this application 0.005 s is enough).
+BrickLV.Reset = 1 //This is a reset and starting Flag, defined as 1 to start the configuration and the saved setup elements.
+
+WHILE (BrickLV.Reset == 1) //Awaits the starting process to finish.
+{}
+
+IF (BrickLV.Reset == 0) //Once the reset process is finished the flag will be 0, filling the condition and the code will continue.
+{
+	Sys.WDTReset = 0 //Software safety is checked again. If it is set to its default value of 0 (or any value less than 100), a value of 5000 RTI cycles is used.
+	Motor[1].PhaseFound = 1
+	Motor[2].PhaseFound = 1
+	Motor[3].PhaseFound = 1
+	Motor[4].PhaseFound = 1
+	Motor[5].PhaseFound = 1
+	Motor[6].PhaseFound = 1
+	kill 1..6
+	jog/ 1..6
+	//jog/ 1
+	//jog/ 2
+	//jog/ 3
+	//jog/ 4
+	//jog/ 5
+	//jog/ 6
+	CALL Timer(0.5)
+	DISABLE PLC PowerOnResetPLC //Everything is Ok, closes the Power On Code loop.
+	CALL Timer(0.005) //Delay is called to avoid any error.
+}
+ELSE //The following piece works to send a message if the reset process fail and did not finish, checked by the Reset flag.
+{
+	// RESET FAILED, TAKE ACTION
+	KILL 1..8 //Cut the motors from the systems.
+	DISABLE PLC 0..31 //Cut the system device communications.
+	SEND 1"RESET FAILED !!!" //Reset Failed message is sent.
+	Sys.WDTReset = 0 //Software safety is checked again. If it is set to its default value of 0 (or any value less than 100), a value of 5000 RTI cycles is used.
+
+	DISABLE PLC PowerOnResetPLC //Close the routine.
+	CALL Timer(0.005) //Delay is called to avoid any error.
+}
+
+CLOSE //Close the script.

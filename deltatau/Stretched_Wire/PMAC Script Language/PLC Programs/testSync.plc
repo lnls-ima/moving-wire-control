@@ -1,0 +1,15 @@
+OPEN PLC testPLC
+
+EncPos = (Motor[1].ActPos - Motor[1].HomePos)/50000
+
+SyncError_fI_horizontal = ((Motor[1].ActPos - Motor[1].HomePos) - (Motor[3].ActPos - Motor[3].HomePos))/50000
+SyncError_sI_horizontal = ((Motor[1].ActPos - Motor[1].HomePos) + (Motor[3].ActPos - Motor[3].HomePos))/50000
+SyncError_fI_vertical = ((Motor[2].ActPos - Motor[2].HomePos) - (Motor[4].ActPos - Motor[4].HomePos))/50000
+SyncError_sI_vertical = ((Motor[2].ActPos - Motor[2].HomePos) + (Motor[4].ActPos - Motor[4].HomePos))/50000
+
+MovError = (PowerBrick[0].Chan[0].ServoCapt - PowerBrick[0].Chan[2].ServoCapt)/256
+
+VelError_h = Motor[1].ActVel - Motor[3].ActVel
+VelError_v = Motor[2].ActVel - Motor[4].ActVel
+
+CLOSE

@@ -1,0 +1,10 @@
+// Axis and Coordinate System Definition
+undefine all // clear all axis definition of all C.S.
+
+&1 // address C.S. 1 using “&”
+#1->50000X
+#3->50000X
+#2->50000Y
+#4->50000Y
+#5->-102400A
+#6->102400A

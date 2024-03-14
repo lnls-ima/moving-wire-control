@@ -1,0 +1,57 @@
+&1
+Open prog 4
+
+local initialPos = Coord[1].CdPos[0]
+local encInitialPos = initialPos*360000
+local enc2pulses = 102400/360000
+local motor5target = 0
+local motor6target = 0
+
+inc	//incremental positioning
+rapid	//rapid move
+
+motionFlag = 1
+
+F(Av) //speed in rev/s
+TA(Aac)	//acceleration time in ms
+TS(Aj)	//jerk time in ms
+Motor[5].JogSpeed = Av
+Motor[6].JogSpeed = Av
+Motor[5].JogTa = Aac
+Motor[6].JogTa = Aac
+Motor[5].JogTs = Aj
+Motor[6].JogTs = Aj
+
+lastTargetDir = targetDir
+
+IF (targetPos - Coord[1].CdPos[0] < 0)
+{
+	targetDir = -1
+}
+ELSE
+{
+	targetDir = 1
+}
+
+IF (targetDir != lastTargetDir)
+{
+	//motor5target = 1*targetDir*blComp*360000
+	//motor6target = -1*targetDir*blComp*360000
+	//jog 5 ^(motor5target); jog 6 ^(motor6target)
+	A(-1*targetDir*blComp)
+	dwell(wait)
+
+	//motor5target = (-1*encInitialPos - (Motor[7].ActPos + Motor[7].HomePos)*enc2pulses)
+	//motor6target = (1*encInitialPos - (Motor[8].ActPos + Motor[8].HomePos)*enc2pulses)
+	//jog 5 ^(motor5target); jog 6 ^(motor6target)
+	a(1*targetDir*blComp)
+	dwell(wait)
+
+	//motor5target = (-1*encInitialPos - (Motor[7].ActPos + Motor[7].HomePos)*enc2pulses)
+	//motor6target = (1*encInitialPos - (Motor[8].ActPos + Motor[8].HomePos)*enc2pulses)
+	//IF (motor5target )
+}
+
+motionFlag = 0
+
+Close

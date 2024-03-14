@@ -1,0 +1,27 @@
+OPEN PLC MotorHome4
+Sys.WpKey = $AAAAAAAA
+Motor4Homed = 0
+Motor[4].HomeOffset = -201000 //-105000
+local MotorPreviousSpeed
+MotorPreviousSpeed = Motor[2].JogSpeed
+
+jog- 2, 4
+CALL Timer(0.5)
+while (Motor[4].MinusLimit == 0 || Motor[4].DesVelZero == 0)
+	{}
+
+kill 2, 4
+jog/ 2, 4
+Motor[2].JogSpeed = Motor[4].HomeVel
+home 4
+jog+ 2
+CALL Timer(0.5)
+while ( Motor[4].HomeInProgress == 1 || Motor[4].HomeComplete == 0 || Motor[4].DesVelZero == 0)
+	{}
+
+jog/ 2
+Motor4Homed = 1
+Motor[2].JogSpeed = MotorPreviousSpeed
+
+DISABLE PLC MotorHome4
+CLOSE

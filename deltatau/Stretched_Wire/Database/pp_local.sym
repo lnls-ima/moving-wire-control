@@ -1,0 +1,17 @@
+1	SUBPROGTimer	delay_time	0	1
+2	SUBPROGTimer	EndTime	1	1
+3	SUBPROGTimer	aux	0	1
+4	SUBPROGTimer	aux	0	1
+5	SUBPROGTimer	initialPos	0	1
+6	SUBPROGTimer	encInitialPos	1	1
+7	SUBPROGTimer	enc2pulses	2	1
+8	SUBPROGTimer	motor5target	3	1
+9	SUBPROGTimer	motor6target	4	1
+10	PLCMotorHome1	Motor1PreviousSpeed	0	1
+11	PLCMotorHome1	Motor3PreviousSpeed	1	1
+12	PLCMotorHome2	MotorPreviousSpeed	0	1
+13	PLCMotorHome3	Motor1PreviousSpeed	0	1
+14	PLCMotorHome3	Motor3PreviousSpeed	1	1
+15	PLCMotorHome4	MotorPreviousSpeed	0	1
+16	PLCMotorHome5	MotorPreviousSpeed	0	1
+17	PLCMotorHome6	MotorPreviousSpeed	0	1

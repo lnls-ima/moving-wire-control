@@ -1,0 +1,12 @@
+			<ParameterSection>
+			<Name name="local:ps1">ECATIO</Name>
+			<Description name="local:ps1.Desc">ECAT I/O</Description>
+			<ParameterSection>
+			<Name name="local:ps1">ECAT[0]</Name>
+			<Description name="local:ps1.Desc">ECAT[0] input/output</Description>
+			</ParameterSection>
+				</ParameterSection>
+			</HostParameterSet>
+		</Connector>
+	</Device>
+</DeviceDescription>

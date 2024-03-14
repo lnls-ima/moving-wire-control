@@ -1,0 +1,60 @@
+OPEN PLC HomeA
+Sys.WpKey = $AAAAAAAA
+
+Motor5Homed = 0
+Motor6Homed = 0
+
+Motor[7].CompPos = Motor[7].HomeOffset
+Motor[8].CompPos = Motor[8].HomeOffset
+
+jog 5 ^(51200); jog 6 ^(-51200)
+CALL Timer(0.3)
+while (Motor[5].DesVelZero == 0 || Motor[6].DesVelZero == 0)
+{
+}
+
+home 5; home 6
+CALL Timer(0.3)
+while ((Motor[5].HomeComplete == 0 || Motor[6].HomeComplete == 0) || (Motor[1].DesVelZero == 0 || Motor[3].DesVelZero == 0) || (Motor5Homed == 0 || Motor6Homed ==0))
+{
+	if (Motor[5].HomeComplete == 1 && Motor5Homed == 0)
+	{
+		homez 7
+		//Motor[7].CompPos = Motor[7].HomeOffset
+		Motor5Homed = 1
+	}
+	if (Motor[6].HomeComplete == 1 && Motor6Homed == 0)
+	{
+		homez 8
+		//Motor[8].CompPos = Motor[8].HomeOffset
+		Motor6Homed = 1
+	}
+}
+
+Motor[7].CompPos = 0
+Motor[8].CompPos = 0
+homez 5, 6
+//Motor[5].JogSpeed = Motor[5].HomeVel
+//Motor[6].JogSpeed = Motor[6].HomeVel
+
+//target5 = ((HomeOffset5 - (Motor[7].ActPos - Motor[7].HomePos))*enc2steps)
+//target6 = ((HomeOffset6 - (Motor[8].ActPos - Motor[8].HomePos))*enc2steps)
+
+//jog 5 = (target5); jog 6 = (target6)
+//CALL Timer(0.3)
+//while (Motor[5].DesVelZero == 0 || Motor[6].DesVelZero == 0)
+//{
+//}
+
+//target5 = ((HomeOffset5 - (Motor[7].ActPos - Motor[7].HomePos))*enc2steps)
+//target6 = ((HomeOffset6 - (Motor[8].ActPos - Motor[8].HomePos))*enc2steps)
+
+//jog 5 = (target5); jog 6 = (target6)
+//CALL Timer(0.3)
+//while (Motor[5].DesVelZero == 0 || Motor[6].DesVelZero == 0)
+//{
+//}
+//homez 5..8
+
+DISABLE PLC HomeA
+CLOSE

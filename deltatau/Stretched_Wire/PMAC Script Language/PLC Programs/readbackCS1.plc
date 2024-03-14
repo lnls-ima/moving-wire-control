@@ -1,0 +1,10 @@
+// CS 1 Forward PLC variables **********************************
+#define X_POS		Coord[1].Q[87]
+#define Y_POS		Coord[1].Q[88]
+
+OPEN PLC readbackCS1
+	Ldata.coord=1
+	pread
+	X_POS = D6
+	Y_POS = D7
+CLOSE

@@ -1,0 +1,68 @@
+OPEN PLC HomeYopen
+Sys.WpKey = $AAAAAAAA
+
+Motor2Homed = 0
+Motor4Homed = 0
+
+Motor[2].JogSpeed = 1024
+Motor[4].JogSpeed = 1024
+
+Motor[7].HomeOffset = -77500
+Motor[8].HomeOffset = -201000
+
+Motor[7].CompPos = Motor[7].HomeOffset
+Motor[8].CompPos = Motor[8].HomeOffset
+
+jog- 2, 4
+CALL Timer(0.5)
+while (Motor[2].MinusLimit == 0 || Motor[4].MinusLimit == 0)
+{
+	if(Motor[2].MinusLimit == 0)
+	{
+		jog- 2
+	}
+
+	if(Motor[4].MinusLimit == 0)
+	{
+		jog- 4
+	}
+}
+
+jog- 2
+while(Motor[2].MinusLimit == 0)
+	{}
+
+kill 2, 4
+jog/ 2, 4
+CALL Timer(0.5)
+home 2
+CALL Timer(0.5)
+home 4
+
+CALL Timer(0.5)
+//while ((Motor[2].HomeInProgress == 1 && Motor[4].HomeInProgress == 1) || (Motor[2].HomeComplete == 0 && Motor[4].HomeComplete == 0) || (Motor[2].DesVelZero == 0 && Motor[4].DesVelZero == 0))
+while (Motor2Homed == 0 || Motor4Homed == 0)
+{
+	if (Motor[2].HomeComplete == 1 && Motor2Homed == 0)
+	{
+		homez 7
+		//Motor[7].CompPos = Motor[7].HomeOffset
+		Motor2Homed = 1
+	}
+	if (Motor[4].HomeComplete == 1 && Motor4Homed == 0)
+	{
+		homez 8
+		//Motor[8].CompPos = Motor[8].HomeOffset
+		Motor4Homed = 1
+}
+	}
+
+Motor[7].CompPos = 0
+Motor[8].CompPos = 0
+//homez 2, 4
+
+Motor[2].JogSpeed = 3072
+Motor[4].JogSpeed = 3072
+
+DISABLE PLC HomeYopen
+CLOSE

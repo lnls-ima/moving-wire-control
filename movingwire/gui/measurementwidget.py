@@ -1443,7 +1443,13 @@ class MeasurementWidget(_QWidget):
             for y in y_pos_array:
                 for x in x_pos_array:
                     if _cfg.Ix:
+                        print(x)
                         self.motors.move_x(x)
+                        self.motors.move_x(x, motor=2)
+                        self.motors.move_x(x, motor=4)
+                        self.motors.move_x(x)
+                        self.motors.move_x(x, motor=2)
+                        self.motors.move_x(x, motor=4)
                         y_init_pos = y - y_motion_step/2
                         y_final_pos = y + y_motion_step/2
                         move_axis = self.motors.move_y
@@ -1492,6 +1498,11 @@ class MeasurementWidget(_QWidget):
 
                     if _cfg.Iy:
                         self.motors.move_y(y)
+                        self.motors.move_y(y, motor=1)
+                        self.motors.move_y(y, motor=3)
+                        self.motors.move_y(y)
+                        self.motors.move_y(y, motor=1)
+                        self.motors.move_y(y, motor=3)
                         x_init_pos = x - x_motion_step/2
                         x_final_pos = x + x_motion_step/2
                         move_axis = self.motors.move_x
@@ -1520,7 +1531,7 @@ class MeasurementWidget(_QWidget):
                             _meas_I2y.start_pos = x_init_pos
                             _meas_I2y.end_pos = x_final_pos
                             _meas_I2y.move_axis = move_axis
-                            _meas_I2y.moving_motor = 4  
+                            _meas_I2y.moving_motor = 4  # Wire moves at entrance
                             move_axis(x, m_mode=2)
                             move_axis(x, m_mode=3)
                             for _ in range(_cfg.repetitions):

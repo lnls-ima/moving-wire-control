@@ -1,0 +1,118 @@
+//Motor 1
+#define MOT1_DIRECTION 1
+
+//Amp mode
+
+BrickLV.Chan[0].TwoPhaseMode = 1 // Motor #1 output mode definition, 1 for Stepper Motors and 0 for brushless/brush motors.
+BrickLV.Chan[0].I2tWarnOnly = 0
+
+//Pwmsf PWM scaling factor, it depends on the voltage that is applied to the DC bus and to the motor. If it is equal than its used the following configuration. Consult Power PMAC LV Manual, at page 124 to check the numbers.
+
+Motor[1].PwmSf = MOT1_DIRECTION * 0.95 * 16384
+
+//I2T Current Integration and Safety Control of current sending to motors. The Power Brick LV can be set up to fault a motor if the time-integrated current levels exceed a certain threshold. This can protect the motor (and drive) from damage due to overheating. It integrates the square of current over time ? commonly known as I2T ("eye-squared-tee") protection.
+
+GLOBAL Ch1MaxAdc = 33.85; // Max ADC reading [A peak] -User Input. 33.85 as a default value for the 5 A/ 15 configuration. Consult the Power PMAC LV manual, page 128.
+GLOBAL Ch1RmsPeakCur = 5.5; // RMS Peak Current [A rms] -User Input - Datasheet
+GLOBAL Ch1RmsContCur = 3.4; // RMS Continuous Current [A rms] --User Input
+GLOBAL Ch1TimeAtPeak = 1; // Time Allowed at peak [sec] --User Input
+
+Motor[1].MaxDac = Ch1RmsPeakCur * 40132.44 / Ch1MaxAdc
+Motor[1].I2TSet = Ch1RmsContCur * 40132.44 / Ch1MaxAdc
+Motor[1].I2tTrip = (POW(Motor[1].MaxDac,2) - POW(Motor[1].I2TSet,2)) * Ch1TimeAtPeak
+Motor[1].IdCmd = Motor[1].I2TSet / 2
+
+// Encoder
+Gate3[0].EncClockDiv = 1 //Set the encoder clock as 100/(2^(ClockDiv)) MHz
+Gate3[0].Chan[0].EncCtrl = 3 // 3: x4 quadrature decode CW. 7: x4 quadrature decode CCW
+	// open loop
+EncTable[1].type = 11
+EncTable[1].pEnc = Motor[1].PhasePos.a
+EncTable[1].index1 = 5
+EncTable[1].index2 = 0
+EncTable[1].index3 = 0
+EncTable[1].index4 = 0
+EncTable[1].index5 = 255
+EncTable[1].index6 = 1
+EncTable[1].ScaleFactor = 1 / (256 * (EncTable[1].index5 + 1) * EXP2(EncTable[1].index1))
+	// closed loop - output in counts - 10.000 counts per rev - 0.036 deg/count
+EncTable[11].type=1
+EncTable[11].pEnc=PowerBrick[0].Chan[0].ServoCapt.a
+EncTable[11].pEnc1=Sys.pushm
+EncTable[11].MaxDelta=0
+EncTable[11].index1=0
+EncTable[11].index2=0
+EncTable[11].index3=0
+EncTable[11].index4=0
+EncTable[11].index5=0
+EncTable[11].index6=0
+EncTable[11].ScaleFactor=(1/256) // Conversion ServoCapt to encoder counts
+
+// Motor 1
+#define Motor1Microstepping 512
+#define Motor1StepAngle 1.8
+#define Enc1CountsPerRev 100000
+Motor[1].pAbsPos = PowerBrick[0].Chan[0].PhaseCapt.a
+Motor[1].ServoCtrl = 1
+Motor[1].AdcMask = $FFFC0000;
+Motor[1].pLimits = PowerBrick[0].Chan[0].Status.a
+Motor[1].AmpFaultLevel = 1
+Motor[1].PhasePosSf = 0
+Motor[1].pAbsPhasePos = PowerBrick[0].Chan[0].PhaseCapt.a
+Motor[1].PhaseOffset = MOT1_DIRECTION * 512
+Motor[1].PhaseCtrl = 6
+Motor[1].PhaseMode = 1
+Motor[1].PowerOnMode = 6
+Motor[1].FatalFeLimit = 400000
+Motor[1].WarnFeLimit = Motor[1].FatalFeLimit/5
+Motor[1].Servo.MaxPosErr= Motor[1].FatalFeLimit*5
+Motor[1].SlipGain = Sys.PhaseOverServoPeriod / (Motor[1].Stime + 1) // Used for direct micro stepping or encoder positioned on the load
+
+Motor[1].pEnc = EncTable[1].a
+Motor[1].pEnc2 = EncTable[1].a
+Motor[1].IiGain=0.9402914
+Motor[1].IpfGain=0
+Motor[1].IpbGain=5.299984
+Motor[1].Servo.Kp=1
+Motor[1].Servo.Kvfb=0
+Motor[1].Servo.Kvifb = 0
+Motor[1].Servo.Ki=0
+Motor[1].Servo.Kvff=10.24
+Motor[1].Servo.Kviff = 0
+Motor[1].Servo.Kaff=0
+Motor[1].JogSpeed = 10000 //1000
+Motor[1].JogTa = 1500 //1500
+Motor[1].JogTs = 0 //150
+Motor[1].AbortTa = 1
+Motor[1].AbortTs = 0.2
+Motor[1].AdvGain = 0.078126326 //1/16*Sys.PhaseOverServoPeriod*(0.25/Sys.ServoPeriod/Sys.PhaseOverServoPeriod)
+
+// Driving motor as hybrid - to drive the motor in open loop, comment the following lines
+motor[1].plimits = powerbrick[0].chan[0].status.a;
+motor[1].dtoverrotortc = 0
+motor[1].slipgain = sys.phaseoverservoperiod;
+motor[1].penc = enctable[11].a
+motor[1].penc2 = enctable[11].a
+motor[1].fatalfelimit = 400000
+motor[1].warnfelimit = motor[1].fatalfelimit/5
+motor[1].servo.maxposerr= motor[1].fatalfelimit*5
+motor[1].servo.kp=0.01
+motor[1].servo.kvfb=0
+motor[1].servo.kvifb = 0
+motor[1].servo.ki=2.0000009e-6
+motor[1].servo.kvff=1
+motor[1].servo.kviff = 0
+motor[1].servo.kaff=0
+motor[1].maxspeed = 0
+motor[1].jogspeed = 100
+motor[1].jogta = 100 //-10
+motor[1].jogts = 0 //150
+motor[1].homevel = 40
+motor[1].abortta = 1
+motor[1].abortts = 0.2
+motor[1].inposband = 5
+motor[1].absphaseposoffset = 2048/6
+motor[1].poweronmode = 0
+
+
+Motor1Homed = 0

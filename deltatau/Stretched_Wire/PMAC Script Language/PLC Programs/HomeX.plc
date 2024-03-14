@@ -1,0 +1,31 @@
+OPEN PLC HomeX
+Sys.WpKey = $AAAAAAAA
+Motor2Homed = 0
+Motor4Homed = 0
+Motor[2].HomeOffset = 0 //-77500
+Motor[4].HomeOffset = -107000 //-201000 //199000
+
+jog- 2, 4
+CALL Timer(0.5)
+while (Motor[4].MinusLimit == 0)
+	{}
+
+jog- 2
+while(Motor[2].MinusLimit == 0)
+	{}
+
+kill 2, 4
+jog/ 2, 4
+CALL Timer(0.5)
+home 2
+CALL Timer(0.5)
+home 4
+CALL Timer(0.5)
+while ((Motor[2].HomeInProgress == 1 && Motor[4].HomeInProgress == 1) || (Motor[2].HomeComplete == 0 && Motor[4].HomeComplete == 0) || (Motor[2].DesVelZero == 0 && Motor[4].DesVelZero == 0))
+	{}
+
+Motor2Homed = 1
+Motor4Homed = 1
+
+DISABLE PLC HomeX
+CLOSE

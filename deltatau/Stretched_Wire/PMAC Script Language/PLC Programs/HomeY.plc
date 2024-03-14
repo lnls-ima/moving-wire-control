@@ -1,0 +1,38 @@
+OPEN PLC HomeY
+Sys.WpKey = $AAAAAAAA
+Motor1Homed = 0
+Motor3Homed = 0
+Motor[1].HomeOffset = 438585 // stretched wire offset 23/09/05 (0 before; encoder reading -438585 at 0)
+Motor[3].HomeOffset = 637518 // stretched wire offset 23/09/05 (182560 before; encoder reading -454958 at 0)
+
+jog- 1, 3
+CALL Timer(0.5)
+//while ((Motor[1].MinusLimit == 0 && Motor[3].MinusLimit == 0) || (Motor[1].DesVelZero == 0 && Motor[3].DesVelZero == 0))
+//	{}
+while (Motor[1].MinusLimit == 0)
+	{}
+
+jog- 3
+while(Motor[3].MinusLimit == 0)
+	{}
+
+kill 1, 3
+jog/ 1, 3
+CALL Timer(0.5)
+home 1
+CALL Timer(0.5)
+// section due to motor 3 moving non-stop in the first command after negative limit being activated
+jog+ 3
+CALL Timer(0.5)
+kill 3
+// end of motor 3 issue section
+home 3
+CALL Timer(0.5)
+while ((Motor[1].HomeInProgress == 1 && Motor[3].HomeInProgress == 1) || (Motor[1].HomeComplete == 0 && Motor[3].HomeComplete == 0) || (Motor[1].DesVelZero == 0 && Motor[3].DesVelZero == 0))
+	{}
+
+Motor1Homed = 1
+Motor3Homed = 1
+
+DISABLE PLC HomeY
+CLOSE

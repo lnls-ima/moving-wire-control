@@ -1,0 +1,11 @@
+Motor[8].PhaseOffset=-512
+Motor[8].PwmSf=32767
+Motor[8].pDac=PowerBrick[1].Chan[3].Pwm[3].a
+Motor[8].pAdc=0
+Motor[8].pPhaseEnc=Sys.pushm
+Motor[8].pEnc2=EncTable[14].a
+Motor[8].pEnc=EncTable[14].a
+Motor[8].Control[0]=$10000000
+Motor[8].ServoCtrl=1
+Motor[8].PhaseSplineCtrl=0
+Motor[8].HomeOffset=-21861

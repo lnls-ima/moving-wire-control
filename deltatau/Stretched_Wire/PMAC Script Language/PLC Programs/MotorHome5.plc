@@ -1,0 +1,28 @@
+OPEN PLC MotorHome5
+Sys.WpKey = $AAAAAAAA
+Motor5Homed = 0
+local MotorPreviousSpeed
+MotorPreviousSpeed = Motor[5].JogSpeed
+Motor[5].JogSpeed = Motor5HomeSpeed
+Motor[6].JogSpeed = Motor5HomeSpeed
+//Motor[6].ServoCtrl = 8
+//Motor[6].CmdMotor = 5
+
+kill 5..6  //avoids no movement error after downloading to controller
+jog/ 5..6
+
+home 5; jog- 6
+CALL Timer(0.5)
+while ( Motor[5].HomeInProgress == 1 || Motor[5].HomeComplete == 0 || Motor[5].DesVelZero == 0)
+	{}
+
+homez 7; jog/ 6
+Motor5Homed = 1
+Motor[5].JogSpeed = MotorPreviousSpeed
+Motor[6].JogSpeed = MotorPreviousSpeed
+
+//Motor[6].CmdMotor = 0
+//Motor[6].ServoCtrl = 1
+
+DISABLE PLC MotorHome5
+CLOSE

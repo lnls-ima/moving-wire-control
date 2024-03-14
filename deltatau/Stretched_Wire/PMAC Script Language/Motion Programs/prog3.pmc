@@ -1,0 +1,36 @@
+&1
+#5->-102400A
+#6->102400A
+
+Open prog 3
+
+motionFlag = 1
+
+abs	//absolute positioning
+rapid	//rapid move
+
+
+F(Av) //speed in rev/s
+TA(Aac)	//acceleration time in ms
+TS(Aj)	//jerk time in ms
+Motor[5].JogSpeed = Av
+Motor[6].JogSpeed = Av
+Motor[5].JogTa = Aac
+Motor[6].JogTa = Aac
+Motor[5].JogTs = Aj
+Motor[6].JogTs = Aj
+
+if(blFlag == 1){
+	A(startPos - blComp)
+	dwell(wait)
+	}
+
+A(startPos)
+dwell(wait)
+
+if (measureFlag == 1){
+	A(endPos)
+	}
+
+motionFlag = 0
+close

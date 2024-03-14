@@ -532,7 +532,7 @@ class AnalysisWidget(_QWidget):
             if meas.motion_axis == 'X':
                 _signal = 1
             elif meas.motion_axis == 'Y':
-                _signal = -1
+                _signal = 1
 
             integrals = _signal*(meas.I[_idx_f, :] - meas.I[_idx_0, :])
             meas.max_integral_diff = integrals.max() - integrals.min()
